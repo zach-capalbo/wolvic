@@ -12,8 +12,9 @@ import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
 
 import org.mozilla.geckoview.GeckoDisplay;
-import org.mozilla.geckoview.GeckoSession;
 import com.igalia.wolvic.browser.Media;
+import com.igalia.wolvic.browser.api.ISession;
+import com.igalia.wolvic.browser.api.ISessionState;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -44,12 +45,12 @@ public class SessionState {
     public boolean mCanGoForward;
     public boolean mIsLoading;
     public boolean mIsInputActive;
-    public transient GeckoSession.ProgressDelegate.SecurityInformation mSecurityInformation;
+    public transient ISession.ProgressDelegate.SecurityInformation mSecurityInformation;
     public String mUri = "";
     public String mPreviousUri;
     public String mTitle = "";
     public transient boolean mFullScreen;
-    public transient GeckoSession mSession;
+    public transient ISession mSession;
     public transient GeckoDisplay mDisplay;
     public SessionSettings mSettings;
     public transient ArrayList<Media> mMediaElements = new ArrayList<>();
@@ -57,7 +58,7 @@ public class SessionState {
     public transient @PopupState int mPopUpState = POPUP_UNUSED;
     public transient @DrmState int mDrmState = DRM_UNUSED;
     @JsonAdapter(SessionState.GeckoSessionStateAdapter.class)
-    public GeckoSession.SessionState mSessionState;
+    public ISessionState mSessionState;
     public long mLastUse;
     public String mRegion;
     public String mId = UUID.randomUUID().toString();
@@ -80,17 +81,17 @@ public class SessionState {
         return result;
     }
 
-    public static class GeckoSessionStateAdapter extends TypeAdapter<GeckoSession.SessionState> {
+    public static class ISessionStateAdapter extends TypeAdapter<ISessionState> {
         @Override
-        public void write(JsonWriter out, GeckoSession.SessionState session) throws IOException {
-            out.jsonValue(session.toString());
+        public void write(JsonWriter out, ISessionState state) throws IOException {
+            out.jsonValue(state.toString());
         }
 
         @Override
-        public GeckoSession.SessionState read(JsonReader in) {
+        public ISessionState read(JsonReader in) {
             try {
                 String session = new JsonParser().parse(in).toString();
-                return GeckoSession.SessionState.fromString(session);
+                return ISessionState.fromJson(session);
 
             } catch (Exception e) {
                 return null;
@@ -113,7 +114,7 @@ public class SessionState {
     public class SessionStateAdapterFactory implements TypeAdapterFactory {
         public <T> TypeAdapter<T> create(Gson gson, TypeToken<T> type) {
             final TypeAdapter<T> delegate = gson.getDelegateAdapter(this, type);
-            final TypeAdapter<GeckoSession.SessionState> gsDelegate = new GeckoSessionStateAdapter();
+            final TypeAdapter<ISessionState> gsDelegate = new ISessionStateAdapter();
 
             return new TypeAdapter<T>() {
                 public void write(JsonWriter out, T value) throws IOException {

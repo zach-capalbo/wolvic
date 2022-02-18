@@ -66,14 +66,6 @@ class SessionSettings {
 
     public void setViewportMode(final int mode) { viewportMode = mode; }
 
-    public boolean isServoEnabled() {
-        return isServoEnabled;
-    }
-
-    public void setServoEnabled(boolean enabled) {
-        isServoEnabled = enabled;
-    }
-
     public static class Builder {
 
         private boolean isPrivateBrowsingEnabled;
@@ -81,7 +73,6 @@ class SessionSettings {
         private boolean isSuspendMediaWhenInactiveEnabled;
         private int userAgentMode;
         private int viewportMode;
-        private boolean isServoEnabled;
         private String userAgentOverride;
 
         public Builder() {
@@ -114,11 +105,6 @@ class SessionSettings {
             return this;
         }
 
-        public Builder withServo(boolean isServoEnabled){
-            this.isServoEnabled= isServoEnabled;
-            return this;
-        }
-
         public Builder withUserAgentOverride(String userAgentOverride) {
             this.userAgentOverride = userAgentOverride;
             return this;
@@ -135,8 +121,7 @@ class SessionSettings {
                     .withTrackingProtection(policy.shouldBlockContent())
                     .withSuspendMediaWhenInactive(true)
                     .withUserAgent(ua)
-                    .withViewport(viewport)
-                    .withServo(false);
+                    .withViewport(viewport);
         }
 
         public SessionSettings build(){
