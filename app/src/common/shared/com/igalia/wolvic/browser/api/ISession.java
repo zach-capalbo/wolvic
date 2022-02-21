@@ -4,25 +4,34 @@ import android.annotation.TargetApi;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.database.Cursor;
+import android.graphics.RectF;
 import android.net.Uri;
 import android.os.Build;
 import android.util.Log;
 import android.view.PointerIcon;
 import android.view.View;
+import android.view.inputmethod.CursorAnchorInfo;
+import android.view.inputmethod.ExtractedText;
+import android.view.inputmethod.ExtractedTextRequest;
 
 import androidx.annotation.AnyThread;
 import androidx.annotation.IntDef;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.StringDef;
 import androidx.annotation.UiThread;
 
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
-import java.util.UUID;
+import java.util.Set;
 
 public interface ISession {
 
@@ -1681,6 +1690,629 @@ public interface ISession {
             return null;
         }
     }
+
+    /**
+     * Interface that SessionTextInput uses for performing operations such as opening and closing the
+     * software keyboard. If the delegate is not set, these operations are forwarded to the system
+     * {@link android.view.inputmethod.InputMethodManager} automatically.
+     */
+    interface TextInputDelegate {
+        /** Restarting input due to an input field gaining focus. */
+        int RESTART_REASON_FOCUS = 0;
+        /** Restarting input due to an input field losing focus. */
+        int RESTART_REASON_BLUR = 1;
+        /**
+         * Restarting input due to the content of the input field changing. For example, the input field
+         * type may have changed, or the current composition may have been committed outside of the
+         * input method.
+         */
+        int RESTART_REASON_CONTENT_CHANGE = 2;
+
+        /**
+         * Reset the input method, and discard any existing states such as the current composition or
+         * current autocompletion. Because the current focused editor may have changed, as part of the
+         * reset, a custom input method would normally call {@link
+         * SessionTextInput#onCreateInputConnection} to update its knowledge of the focused editor. Note
+         * that {@code restartInput} should be used to detect changes in focus, rather than {@link
+         * #showSoftInput} or {@link #hideSoftInput}, because focus changes are not always accompanied
+         * by requests to show or hide the soft input. This method is always called, even in viewless
+         * mode.
+         *
+         * @param session Session instance.
+         * @param reason Reason for the reset.
+         */
+        @UiThread
+        default void restartInput(
+                @NonNull final ISession session, @RestartReason final int reason) {}
+
+        /**
+         * Display the soft input. May be called consecutively, even if the soft input is already shown.
+         * This method is always called, even in viewless mode.
+         *
+         * @param session Session instance.
+         * @see #hideSoftInput
+         */
+        @UiThread
+        default void showSoftInput(@NonNull final ISession session) {}
+
+        /**
+         * Hide the soft input. May be called consecutively, even if the soft input is already hidden.
+         * This method is always called, even in viewless mode.
+         *
+         * @param session Session instance.
+         * @see #showSoftInput
+         */
+        @UiThread
+        default void hideSoftInput(@NonNull final ISession session) {}
+
+        /**
+         * Update the soft input on the current selection. This method is <i>not</i> called in viewless
+         * mode.
+         *
+         * @param session Session instance.
+         * @param selStart Start offset of the selection.
+         * @param selEnd End offset of the selection.
+         * @param compositionStart Composition start offset, or -1 if there is no composition.
+         * @param compositionEnd Composition end offset, or -1 if there is no composition.
+         */
+        @UiThread
+        default void updateSelection(
+                @NonNull final ISession session,
+                final int selStart,
+                final int selEnd,
+                final int compositionStart,
+                final int compositionEnd) {}
+
+        /**
+         * Update the soft input on the current extracted text, as requested through {@link
+         * android.view.inputmethod.InputConnection#getExtractedText}. Consequently, this method is
+         * <i>not</i> called in viewless mode.
+         *
+         * @param session Session instance.
+         * @param request The extract text request.
+         * @param text The extracted text.
+         */
+        @UiThread
+        default void updateExtractedText(
+                @NonNull final ISession session,
+                @NonNull final ExtractedTextRequest request,
+                @NonNull final ExtractedText text) {}
+
+        /**
+         * Update the cursor-anchor information as requested through {@link
+         * android.view.inputmethod.InputConnection#requestCursorUpdates}. Consequently, this method is
+         * <i>not</i> called in viewless mode.
+         *
+         * @param session Session instance.
+         * @param info Cursor-anchor information.
+         */
+        @UiThread
+        default void updateCursorAnchorInfo(
+                @NonNull final ISession session, @NonNull final CursorAnchorInfo info) {}
+    }
+
+    @Retention(RetentionPolicy.SOURCE)
+    @IntDef({
+            ISession.TextInputDelegate.RESTART_REASON_FOCUS,
+            ISession.TextInputDelegate.RESTART_REASON_BLUR,
+            ISession.TextInputDelegate.RESTART_REASON_CONTENT_CHANGE
+    })
+            /* package */ @interface RestartReason {}
+
+
+
+    /**
+     * ISession applications implement this interface to handle requests for permissions from
+     * content, such as geolocation and notifications. For each permission, usually two requests are
+     * generated: one request for the Android app permission through requestAppPermissions, which is
+     * typically handled by a system permission dialog; and another request for the content permission
+     * (e.g. through requestContentPermission), which is typically handled by an app-specific
+     * permission dialog.
+     *
+     * <p>When denying an Android app permission, the response is not stored by GeckoView. It is the
+     * responsibility of the consumer to store the response state and therefore prevent further
+     * requests from being presented to the user.
+     */
+    interface PermissionDelegate {
+        /**
+         * Permission for using the geolocation API. See:
+         * https://developer.mozilla.org/en-US/docs/Web/API/Geolocation
+         */
+        int PERMISSION_GEOLOCATION = 0;
+
+        /**
+         * Permission for using the notifications API. See:
+         * https://developer.mozilla.org/en-US/docs/Web/API/notification
+         */
+        int PERMISSION_DESKTOP_NOTIFICATION = 1;
+
+        /**
+         * Permission for using the storage API. See:
+         * https://developer.mozilla.org/en-US/docs/Web/API/Storage_API
+         */
+        int PERMISSION_PERSISTENT_STORAGE = 2;
+
+        /** Permission for using the WebXR API. See: https://www.w3.org/TR/webxr */
+        int PERMISSION_XR = 3;
+
+        /** Permission for allowing autoplay of inaudible (silent) video. */
+        int PERMISSION_AUTOPLAY_INAUDIBLE = 4;
+
+        /** Permission for allowing autoplay of audible video. */
+        int PERMISSION_AUTOPLAY_AUDIBLE = 5;
+
+        /** Permission for accessing system media keys used to decode DRM media. */
+        int PERMISSION_MEDIA_KEY_SYSTEM_ACCESS = 6;
+
+        /**
+         * Permission for trackers to operate on the page -- disables all tracking protection features
+         * for a given site.
+         */
+        int PERMISSION_TRACKING = 7;
+
+        /**
+         * Permission for third party frames to access first party cookies and storage. May be granted
+         * heuristically in some cases.
+         */
+        int PERMISSION_STORAGE_ACCESS = 8;
+
+        /**
+         * Represents a content permission -- including the type of permission, the present value of the
+         * permission, the URL the permission pertains to, and other information.
+         */
+        class ContentPermission {
+            @Retention(RetentionPolicy.SOURCE)
+            @IntDef({VALUE_PROMPT, VALUE_DENY, VALUE_ALLOW})
+                    /* package */ @interface Value {}
+
+            /** The corresponding permission is currently set to default/prompt behavior. */
+            public static final int VALUE_PROMPT = 3;
+
+            /** The corresponding permission is currently set to deny. */
+            public static final int VALUE_DENY = 2;
+
+            /** The corresponding permission is currently set to allow. */
+            public static final int VALUE_ALLOW = 1;
+
+            /** The URI associated with this content permission. */
+            public final @NonNull String uri;
+
+            /**
+             * The third party origin associated with the request; currently only used for storage access
+             * permission.
+             */
+            public final @Nullable String thirdPartyOrigin;
+
+            /**
+             * A boolean indicating whether this content permission is associated with private browsing.
+             */
+            public final boolean privateMode;
+
+            /** The type of this permission; one of {@link #PERMISSION_GEOLOCATION PERMISSION_*}. */
+            public final int permission;
+
+            /** The value of the permission; one of {@link #VALUE_PROMPT VALUE_}. */
+            public final @Value int value;
+
+            /**
+             * The context ID associated with the permission if any.
+             *
+             * @see ISessionSettings.Builder#contextId
+             */
+            public final @Nullable String contextId;
+
+            protected ContentPermission() {
+                this.uri = "";
+                this.thirdPartyOrigin = null;
+                this.privateMode = false;
+                this.permission = PERMISSION_GEOLOCATION;
+                this.value = VALUE_ALLOW;
+                this.mPrincipal = "";
+                this.contextId = null;
+            }
+        }
+
+        /** Callback interface for notifying the result of a permission request. */
+        interface Callback {
+            /**
+             * Called by the implementation after permissions are granted; the implementation must call
+             * either grant() or reject() for every request.
+             */
+            @UiThread
+            default void grant() {}
+
+            /**
+             * Called by the implementation when permissions are not granted; the implementation must call
+             * either grant() or reject() for every request.
+             */
+            @UiThread
+            default void reject() {}
+        }
+
+        /**
+         * Request Android app permissions.
+         *
+         * @param session ISession instance requesting the permissions.
+         * @param permissions List of permissions to request; possible values are,
+         *     android.Manifest.permission.ACCESS_COARSE_LOCATION
+         *     android.Manifest.permission.ACCESS_FINE_LOCATION android.Manifest.permission.CAMERA
+         *     android.Manifest.permission.RECORD_AUDIO
+         * @param callback Callback interface.
+         */
+        @UiThread
+        default void onAndroidPermissionsRequest(
+                @NonNull final ISession session,
+                @Nullable final String[] permissions,
+                @NonNull final ISession.PermissionDelegate.Callback callback) {
+            callback.reject();
+        }
+
+        /**
+         * Request content permission.
+         *
+         * <p>Note, that in the case of PERMISSION_PERSISTENT_STORAGE, once permission has been granted
+         * for a site, it cannot be revoked. If the permission has previously been granted, it is the
+         * responsibility of the consuming app to remember the permission and prevent the prompt from
+         * being redisplayed to the user.
+         *
+         * @param session ISession instance requesting the permission.
+         * @param perm An {@link ISession.PermissionDelegate.ContentPermission} describing the permission being requested and its
+         *     current status.
+         * @return A {@link GeckoResult} resolving to one of {@link ISession.PermissionDelegate.ContentPermission#VALUE_PROMPT
+         *     VALUE_*}, determining the response to the permission request and updating the permissions
+         *     for this site.
+         */
+        @UiThread
+        default @Nullable GeckoResult<Integer> onContentPermissionRequest(
+                @NonNull final ISession session, @NonNull ISession.PermissionDelegate.ContentPermission perm) {
+            return GeckoResult.fromValue(ISession.PermissionDelegate.ContentPermission.VALUE_PROMPT);
+        }
+
+        class MediaSource {
+            @Retention(RetentionPolicy.SOURCE)
+            @IntDef({
+                    SOURCE_CAMERA, SOURCE_SCREEN,
+                    SOURCE_MICROPHONE, SOURCE_AUDIOCAPTURE,
+                    SOURCE_OTHER
+            })
+                    /* package */ @interface Source {}
+
+            /** Constant to indicate that camera will be recorded. */
+            public static final int SOURCE_CAMERA = 0;
+
+            /** Constant to indicate that screen will be recorded. */
+            public static final int SOURCE_SCREEN = 1;
+
+            /** Constant to indicate that microphone will be recorded. */
+            public static final int SOURCE_MICROPHONE = 2;
+
+            /** Constant to indicate that device audio playback will be recorded. */
+            public static final int SOURCE_AUDIOCAPTURE = 3;
+
+            /** Constant to indicate a media source that does not fall under the other categories. */
+            public static final int SOURCE_OTHER = 4;
+
+            @Retention(RetentionPolicy.SOURCE)
+            @IntDef({TYPE_VIDEO, TYPE_AUDIO})
+                    /* package */ @interface Type {}
+
+            /** The media type is video. */
+            public static final int TYPE_VIDEO = 0;
+
+            /** The media type is audio. */
+            public static final int TYPE_AUDIO = 1;
+
+            /** A string giving the origin-specific source identifier. */
+            public final @NonNull String id;
+
+            /** A string giving the non-origin-specific source identifier. */
+            public final @NonNull String rawId;
+
+            /**
+             * A string giving the name of the video source from the system (for example, "Camera 0,
+             * Facing back, Orientation 90"). May be empty.
+             */
+            public final @Nullable String name;
+
+            /**
+             * An int indicating the media source type. Possible values for a video source are:
+             * SOURCE_CAMERA, SOURCE_SCREEN, and SOURCE_OTHER. Possible values for an audio source are:
+             * SOURCE_MICROPHONE, SOURCE_AUDIOCAPTURE, and SOURCE_OTHER.
+             */
+            public final @Source int source;
+
+            /** An int giving the type of media, must be either TYPE_VIDEO or TYPE_AUDIO. */
+            public final @Type int type;
+
+            /** Empty constructor for tests. */
+            protected MediaSource() {
+                id = null;
+                rawId = null;
+                name = null;
+                source = 0;
+                type = 0;
+            }
+        }
+    }
+
+    @Retention(RetentionPolicy.SOURCE)
+    @IntDef({
+            ISession.PermissionDelegate.PERMISSION_GEOLOCATION,
+            ISession.PermissionDelegate.PERMISSION_DESKTOP_NOTIFICATION,
+            ISession.PermissionDelegate.PERMISSION_PERSISTENT_STORAGE,
+            ISession.PermissionDelegate.PERMISSION_XR,
+            ISession.PermissionDelegate.PERMISSION_AUTOPLAY_INAUDIBLE,
+            ISession.PermissionDelegate.PERMISSION_AUTOPLAY_AUDIBLE,
+            ISession.PermissionDelegate.PERMISSION_MEDIA_KEY_SYSTEM_ACCESS,
+            ISession.PermissionDelegate.PERMISSION_TRACKING,
+            ISession.PermissionDelegate.PERMISSION_STORAGE_ACCESS
+    })
+            /* package */ @interface Permission {}
+
+
+    interface SelectionActionDelegate {
+        /** The selection is collapsed at a single position. */
+        int FLAG_IS_COLLAPSED = 1;
+        /**
+         * The selection is inside editable content such as an input element or contentEditable node.
+         */
+        int FLAG_IS_EDITABLE = 2;
+        /** The selection is inside a password field. */
+        int FLAG_IS_PASSWORD = 4;
+
+        /** Hide selection actions and cause {@link #onHideAction} to be called. */
+        String ACTION_HIDE = "HIDE";
+        /** Copy onto the clipboard then delete the selected content. Selection must be editable. */
+        String ACTION_CUT = "CUT";
+        /** Copy the selected content onto the clipboard. */
+        String ACTION_COPY = "COPY";
+        /** Delete the selected content. Selection must be editable. */
+        String ACTION_DELETE = "DELETE";
+        /** Replace the selected content with the clipboard content. Selection must be editable. */
+        String ACTION_PASTE = "PASTE";
+        /**
+         * Replace the selected content with the clipboard content as plain text. Selection must be
+         * editable.
+         */
+        String ACTION_PASTE_AS_PLAIN_TEXT = "PASTE_AS_PLAIN_TEXT";
+        /** Select the entire content of the document or editor. */
+        String ACTION_SELECT_ALL = "SELECT_ALL";
+        /** Clear the current selection. Selection must not be editable. */
+        String ACTION_UNSELECT = "UNSELECT";
+        /** Collapse the current selection to its start position. Selection must be editable. */
+        String ACTION_COLLAPSE_TO_START = "COLLAPSE_TO_START";
+        /** Collapse the current selection to its end position. Selection must be editable. */
+        String ACTION_COLLAPSE_TO_END = "COLLAPSE_TO_END";
+
+        /** Represents attributes of a selection. */
+        interface Selection {
+            /**
+             * Flags describing the current selection, as a bitwise combination of the {@link
+             * #FLAG_IS_COLLAPSED FLAG_*} constants.
+             */
+            @SelectionActionDelegateFlag int flags();
+
+            /**
+             * Text content of the current selection. An empty string indicates the selection is collapsed
+             * or the selection cannot be represented as plain text.
+             */
+            @NonNull String text();
+
+            /**
+             * The bounds of the current selection in client coordinates. Use {@link
+             * ISession#getClientToScreenMatrix} to perform transformation to screen coordinates.
+             */
+            @Nullable RectF clientRect();
+
+            /** Set of valid actions available through {@link ISession.SelectionActionDelegate.Selection#execute(String)} */
+            @NonNull @SelectionActionDelegateAction Collection<String> availableActions();
+
+            /**
+             * Checks if the passed action is available
+             *
+             * @param action An {@link ISession.SelectionActionDelegate} to perform
+             * @return True if the action is available.
+             */
+            @AnyThread
+            boolean isActionAvailable(@NonNull @SelectionActionDelegateAction final String action);
+
+
+            /**
+             * Execute an {@link ISession.SelectionActionDelegate} action.
+             *
+             * @throws IllegalStateException If the action was not available.
+             * @param action A {@link ISession.SelectionActionDelegate} action.
+             */
+            @AnyThread
+            void execute(@NonNull @SelectionActionDelegateAction final String action);
+
+            /**
+             * Hide selection actions and cause {@link #onHideAction} to be called.
+             *
+             * @throws IllegalStateException If the action was not available.
+             */
+            @AnyThread
+            default void hide() {
+                execute(ACTION_HIDE);
+            }
+
+            /**
+             * Copy onto the clipboard then delete the selected content.
+             *
+             * @throws IllegalStateException If the action was not available.
+             */
+            @AnyThread
+            default void cut() {
+                execute(ACTION_CUT);
+            }
+
+            /**
+             * Copy the selected content onto the clipboard.
+             *
+             * @throws IllegalStateException If the action was not available.
+             */
+            @AnyThread
+            default void copy() {
+                execute(ACTION_COPY);
+            }
+
+            /**
+             * Delete the selected content.
+             *
+             * @throws IllegalStateException If the action was not available.
+             */
+            @AnyThread
+            default void delete() {
+                execute(ACTION_DELETE);
+            }
+
+            /**
+             * Replace the selected content with the clipboard content.
+             *
+             * @throws IllegalStateException If the action was not available.
+             */
+            @AnyThread
+            default void paste() {
+                execute(ACTION_PASTE);
+            }
+
+            /**
+             * Replace the selected content with the clipboard content as plain text.
+             *
+             * @throws IllegalStateException If the action was not available.
+             */
+            @AnyThread
+            default void pasteAsPlainText() {
+                execute(ACTION_PASTE_AS_PLAIN_TEXT);
+            }
+
+            /**
+             * Select the entire content of the document or editor.
+             *
+             * @throws IllegalStateException If the action was not available.
+             */
+            @AnyThread
+            default void selectAll() {
+                execute(ACTION_SELECT_ALL);
+            }
+
+            /**
+             * Clear the current selection.
+             *
+             * @throws IllegalStateException If the action was not available.
+             */
+            @AnyThread
+            default void unselect() {
+                execute(ACTION_UNSELECT);
+            }
+
+            /**
+             * Collapse the current selection to its start position.
+             *
+             * @throws IllegalStateException If the action was not available.
+             */
+            @AnyThread
+            default void collapseToStart() {
+                execute(ACTION_COLLAPSE_TO_START);
+            }
+
+            /**
+             * Collapse the current selection to its end position.
+             *
+             * @throws IllegalStateException If the action was not available.
+             */
+            @AnyThread
+            default void collapseToEnd() {
+                execute(ACTION_COLLAPSE_TO_END);
+            }
+        }
+
+        /**
+         * Selection actions are available. Selection actions become available when the user selects
+         * some content in the document or editor. Inside an editor, selection actions can also become
+         * available when the user explicitly requests editor action UI, for example by tapping on the
+         * caret handle.
+         *
+         * <p>In response to this callback, applications typically display a toolbar containing the
+         * selection actions. To perform a certain action, check if the action is available with {@link
+         * ISession.SelectionActionDelegate.Selection#isActionAvailable} then either use the relevant helper method or {@link
+         * ISession.SelectionActionDelegate.Selection#execute}
+         *
+         * <p>Once an {@link #onHideAction} call (with particular reasons) or another {@link
+         * #onShowActionRequest} call is received, the previous Selection object is no longer usable.
+         *
+         * @param session The ISession that initiated the callback.
+         * @param selection Current selection attributes and Callback object for performing built-in
+         *     actions. May be used multiple times to perform multiple actions at once.
+         */
+        @UiThread
+        default void onShowActionRequest(
+                @NonNull final ISession session, @NonNull final ISession.SelectionActionDelegate.Selection selection) {}
+
+        /** Actions are no longer available due to the user clearing the selection. */
+        final int HIDE_REASON_NO_SELECTION = 0;
+        /**
+         * Actions are no longer available due to the user moving the selection out of view. Previous
+         * actions are still available after a callback with this reason.
+         */
+        final int HIDE_REASON_INVISIBLE_SELECTION = 1;
+        /**
+         * Actions are no longer available due to the user actively changing the selection. {@link
+         * #onShowActionRequest} may be called again once the user has set a selection, if the new
+         * selection has available actions.
+         */
+        final int HIDE_REASON_ACTIVE_SELECTION = 2;
+        /**
+         * Actions are no longer available due to the user actively scrolling the page. {@link
+         * #onShowActionRequest} may be called again once the user has stopped scrolling the page, if
+         * the selection is still visible. Until then, previous actions are still available after a
+         * callback with this reason.
+         */
+        final int HIDE_REASON_ACTIVE_SCROLL = 3;
+
+        /**
+         * Previous actions are no longer available due to the user interacting with the page.
+         * Applications typically hide the action toolbar in response.
+         *
+         * @param session The ISession that initiated the callback.
+         * @param reason The reason that actions are no longer available, as one of the {@link
+         *     #HIDE_REASON_NO_SELECTION HIDE_REASON_*} constants.
+         */
+        @UiThread
+        default void onHideAction(
+                @NonNull final ISession session, @SelectionActionDelegateHideReason final int reason) {}
+    }
+
+    @Retention(RetentionPolicy.SOURCE)
+    @StringDef({
+            ISession.SelectionActionDelegate.ACTION_HIDE,
+            ISession.SelectionActionDelegate.ACTION_CUT,
+            ISession.SelectionActionDelegate.ACTION_COPY,
+            ISession.SelectionActionDelegate.ACTION_DELETE,
+            ISession.SelectionActionDelegate.ACTION_PASTE,
+            ISession.SelectionActionDelegate.ACTION_PASTE_AS_PLAIN_TEXT,
+            ISession.SelectionActionDelegate.ACTION_SELECT_ALL,
+            ISession.SelectionActionDelegate.ACTION_UNSELECT,
+            ISession.SelectionActionDelegate.ACTION_COLLAPSE_TO_START,
+            ISession.SelectionActionDelegate.ACTION_COLLAPSE_TO_END
+    })
+            /* package */ @interface SelectionActionDelegateAction {}
+
+    @Retention(RetentionPolicy.SOURCE)
+    @IntDef(
+            flag = true,
+            value = {ISession.SelectionActionDelegate.FLAG_IS_COLLAPSED, ISession.SelectionActionDelegate.FLAG_IS_EDITABLE})
+            /* package */ @interface SelectionActionDelegateFlag {}
+
+    @Retention(RetentionPolicy.SOURCE)
+    @IntDef({
+            ISession.SelectionActionDelegate.HIDE_REASON_NO_SELECTION,
+            ISession.SelectionActionDelegate.HIDE_REASON_INVISIBLE_SELECTION,
+            ISession.SelectionActionDelegate.HIDE_REASON_ACTIVE_SELECTION,
+            ISession.SelectionActionDelegate.HIDE_REASON_ACTIVE_SCROLL
+    })
+            /* package */ @interface SelectionActionDelegateHideReason {}
+
 
     /**
      * Load the given URI.

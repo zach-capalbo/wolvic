@@ -7,11 +7,15 @@ import com.igalia.wolvic.browser.api.IRuntime;
 import com.igalia.wolvic.browser.api.ISession;
 import com.igalia.wolvic.browser.api.ISessionSettings;
 import com.igalia.wolvic.browser.api.ISessionState;
+import com.igalia.wolvic.browser.api.MediaSession;
 
 import org.mozilla.geckoview.GeckoSession;
 
 public class SessionImpl implements ISession {
     private @NonNull GeckoSession mSession;
+    private ISession.ContentDelegate mContentDelegate;
+    private ISession.SelectionActionDelegate mSelectionActionDelegate;
+    private MediaSession.Delegate mMediaSessionDelegate;
 
     @Override
     public void loadUri(@NonNull String uri, int flags) {
@@ -83,13 +87,21 @@ public class SessionImpl implements ISession {
 
     @Override
     public void setContentDelegate(@Nullable ContentDelegate delegate) {
-
+        if (mContentDelegate == delegate) {
+            return;
+        }
+        mContentDelegate = delegate;
+        if (mContentDelegate == null) {
+            mSession.setContentDelegate(null);
+        } else {
+            mSession.setContentDelegate(new ContentDelegateImpl(mContentDelegate, this));
+        }
     }
 
     @Nullable
     @Override
     public ContentDelegate getContentDelegate() {
-        return null;
+        return mContentDelegate;
     }
 
     @Override
@@ -160,24 +172,40 @@ public class SessionImpl implements ISession {
 
     @Override
     public void setSelectionActionDelegate(@Nullable ISession.SelectionActionDelegate delegate) {
-
+        if (mSelectionActionDelegate == delegate) {
+            return;
+        }
+        mSelectionActionDelegate = delegate;
+        if (mContentDelegate == null) {
+            mSession.setSelectionActionDelegate(null);
+        } else {
+            mSession.setSelectionActionDelegate(new SelectionActionDelegateImpl(mSelectionActionDelegate, this));
+        }
     }
 
     @Override
     public void setMediaSessionDelegate(@Nullable MediaSession.Delegate delegate) {
-
+        if (mMediaSessionDelegate == delegate) {
+            return;
+        }
+        mMediaSessionDelegate = delegate;
+        if (delegate == null) {
+            mSession.setMediaSessionDelegate(null);
+        } else {
+            mSession.setMediaSessionDelegate(new MediaSessionDelegateImpl(this, delegate));
+        }
     }
 
     @Nullable
     @Override
     public MediaSession.Delegate getMediaSessionDelegate() {
-        return null;
+        return mMediaSessionDelegate;
     }
 
     @Nullable
     @Override
     public ISession.SelectionActionDelegate getSelectionActionDelegate() {
-        return null;
+        return mSelectionActionDelegate;
     }
 
 
