@@ -5,32 +5,36 @@
 package com.igalia.wolvic.browser.engine
 
 import android.content.Context
-import org.mozilla.geckoview.ContentBlocking
-import org.mozilla.geckoview.GeckoRuntime
-import org.mozilla.geckoview.GeckoRuntimeSettings
-import org.mozilla.geckoview.GeckoWebExecutor
 import com.igalia.wolvic.BuildConfig
 import com.igalia.wolvic.browser.SettingsStore
+import com.igalia.wolvic.browser.api.ContentBlocking
+import com.igalia.wolvic.browser.api.IRuntime
+import com.igalia.wolvic.browser.api.RuntimeSettings
 import com.igalia.wolvic.browser.content.TrackingProtectionPolicy
 import com.igalia.wolvic.browser.content.TrackingProtectionStore
 import com.igalia.wolvic.crashreporting.CrashReporterService
+import org.mozilla.geckoview.GeckoWebExecutor
 
 object EngineProvider {
 
-    private var runtime: GeckoRuntime? = null
+    private var runtime: IRuntime? = null
     private var executor: GeckoWebExecutor? = null
     private var client: GeckoViewFetchClient? = null
 
     @Synchronized
-    fun getOrCreateRuntime(context: Context): GeckoRuntime {
+    fun getOrCreateRuntime(context: Context): IRuntime {
         if (runtime == null) {
-            val builder = GeckoRuntimeSettings.Builder()
+            val builder = RuntimeSettings.Builder()
             val settingsStore = SettingsStore.getInstance(context)
 
             val policy : TrackingProtectionPolicy = TrackingProtectionStore.getTrackingProtectionPolicy(context);
             builder.crashHandler(CrashReporterService::class.java)
-            builder.contentBlocking(ContentBlocking.Settings.Builder()
+            builder.contentBlocking(
+                ContentBlocking.Settings.Builder()
                     .antiTracking(policy.antiTrackingPolicy)
+                    .strictSocialTrackingProtection(policy.shouldBlockContent())
+                    .cookieBehavior(policy.cookiePolicy)
+                    .cookieBehaviorPrivateMode(policy.cookiePolicy)
                     .enhancedTrackingProtectionLevel(settingsStore.trackingProtectionLevel)
                     .build())
             builder.displayDensityOverride(settingsStore.displayDensity)
@@ -60,7 +64,7 @@ object EngineProvider {
                 builder.glMsaaLevel(0)
             }
 
-            runtime = GeckoRuntime.create(context, builder.build())
+            runtime = IRuntime.create(context, builder.build())
         }
 
         return runtime!!

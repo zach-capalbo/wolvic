@@ -3,25 +3,46 @@ package com.igalia.wolvic.browser.api.impl;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.igalia.wolvic.browser.api.ContentBlocking;
+import com.igalia.wolvic.browser.api.IDisplay;
 import com.igalia.wolvic.browser.api.IRuntime;
 import com.igalia.wolvic.browser.api.ISession;
 import com.igalia.wolvic.browser.api.ISessionSettings;
 import com.igalia.wolvic.browser.api.ISessionState;
 import com.igalia.wolvic.browser.api.MediaSession;
-
 import org.mozilla.geckoview.GeckoSession;
 
 public class SessionImpl implements ISession {
     private @NonNull GeckoSession mSession;
+    private ISessionSettings mSettings;
     private ISession.ContentDelegate mContentDelegate;
     private ISession.SelectionActionDelegate mSelectionActionDelegate;
     private MediaSession.Delegate mMediaSessionDelegate;
+
+    public SessionImpl(@Nullable ISessionSettings settings) {
+        if (settings == null) {
+            mSession = new GeckoSession();
+        } else {
+            mSession = new GeckoSession(((SettingsImpl)settings).getGeckoSettings());
+        }
+        mSettings = new SettingsImpl(mSession.getSettings());
+    }
+
+    public @NonNull GeckoSession getGeckoSession() {
+        return mSession;
+    }
 
     @Override
     public void loadUri(@NonNull String uri, int flags) {
         mSession.load(new GeckoSession.Loader()
                 .uri(uri)
                 .flags(toGeckoFlags(flags)));
+    }
+
+    @Override
+    public void loadData(@NonNull byte[] data, String mymeType) {
+        mSession.load(new GeckoSession.Loader()
+                .data(data, mymeType));
     }
 
     @Override
@@ -46,7 +67,7 @@ public class SessionImpl implements ISession {
 
     @Override
     public void open(@NonNull IRuntime runtime) {
-        mSession.open(((IRuntimeImpl)runtime).getGeckoRuntime());
+        mSession.open(((RuntimeImpl)runtime).getGeckoRuntime());
     }
 
     @Override
@@ -74,10 +95,31 @@ public class SessionImpl implements ISession {
         mSession.gotoHistoryIndex(index);
     }
 
+    @Override
+    public void purgeHistory() {
+        mSession.purgeHistory();
+    }
+
     @NonNull
     @Override
     public ISessionSettings getSettings() {
-        return null;
+        return mSettings;
+    }
+
+    @Override
+    public void exitFullScreen() {
+        mSession.exitFullScreen();
+    }
+
+    @NonNull
+    @Override
+    public IDisplay acquireDisplay() {
+        return new DisplayImpl(mSession.acquireDisplay());
+    }
+
+    @Override
+    public void releaseDisplay(@NonNull IDisplay display) {
+        mSession.releaseDisplay(((DisplayImpl)display).getGeckoDisplay());
     }
 
     @Override

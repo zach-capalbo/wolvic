@@ -23,10 +23,10 @@ import mozilla.components.support.base.log.logger.Logger
 import mozilla.components.support.base.log.sink.AndroidLogSink
 import mozilla.components.support.rusthttp.RustHttpConfig
 import mozilla.components.support.rustlog.RustLog
-import org.mozilla.geckoview.AllowOrDeny
-import org.mozilla.geckoview.GeckoResult
-import org.mozilla.geckoview.GeckoSession
 import com.igalia.wolvic.R
+import com.igalia.wolvic.browser.api.AllowOrDeny
+import com.igalia.wolvic.browser.api.IResult
+import com.igalia.wolvic.browser.api.ISession
 import com.igalia.wolvic.browser.engine.EngineProvider
 import com.igalia.wolvic.telemetry.TelemetryService
 import com.igalia.wolvic.ui.widgets.WidgetManagerDelegate
@@ -34,7 +34,7 @@ import com.igalia.wolvic.utils.ConnectivityReceiver
 import com.igalia.wolvic.utils.SystemUtils
 
 
-class Services(val context: Context, places: Places): GeckoSession.NavigationDelegate {
+class Services(val context: Context, places: Places): ISession.NavigationDelegate {
 
     private val LOGTAG = SystemUtils.createLogtag(Services::class.java)
 
@@ -120,7 +120,7 @@ class Services(val context: Context, places: Places): GeckoSession.NavigationDel
         }
     }
 
-    override fun onLoadRequest(geckoSession: GeckoSession, loadRequest: GeckoSession.NavigationDelegate.LoadRequest): GeckoResult<AllowOrDeny>? {
+    override fun onLoadRequest(geckoSession: ISession, loadRequest: ISession.NavigationDelegate.LoadRequest): IResult<AllowOrDeny>? {
         if (loadRequest.uri.startsWith(REDIRECT_URL)) {
             val parsedUri = Uri.parse(loadRequest.uri)
 
@@ -128,7 +128,7 @@ class Services(val context: Context, places: Places): GeckoSession.NavigationDel
                 val state = parsedUri.getQueryParameter("state") as String
                 val action = parsedUri.getQueryParameter("action") as String
 
-                val geckoResult = GeckoResult<AllowOrDeny>()
+                val geckoResult = IResult.create<AllowOrDeny>();
 
                 // Notify the state machine about our success.
                 CoroutineScope(Dispatchers.Main).launch {
@@ -145,10 +145,10 @@ class Services(val context: Context, places: Places): GeckoSession.NavigationDel
 
                 return geckoResult
             }
-            return GeckoResult.deny()
+            return IResult.deny()
         }
 
-        return GeckoResult.allow()
+        return IResult.allow()
     }
 
 }

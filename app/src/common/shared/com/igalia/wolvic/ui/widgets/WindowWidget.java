@@ -52,6 +52,7 @@ import com.igalia.wolvic.browser.PromptDelegate;
 import com.igalia.wolvic.browser.SessionChangeListener;
 import com.igalia.wolvic.browser.SettingsStore;
 import com.igalia.wolvic.browser.VideoAvailabilityListener;
+import com.igalia.wolvic.browser.api.ISession;
 import com.igalia.wolvic.browser.engine.Session;
 import com.igalia.wolvic.browser.engine.SessionState;
 import com.igalia.wolvic.browser.engine.SessionStore;
@@ -69,9 +70,7 @@ import com.igalia.wolvic.utils.UrlUtils;
 import com.igalia.wolvic.utils.ViewUtils;
 
 import java.io.File;
-import java.io.IOException;
 import java.net.URLConnection;
-import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -1108,7 +1107,7 @@ public class WindowWidget extends UIWidget implements SessionChangeListener,
 
     // Session.GeckoSessionChange
     @Override
-    public void onCurrentSessionChange(GeckoSession aOldSession, GeckoSession aSession) {
+    public void onCurrentSessionChange(ISession aOldSession, ISession aSession) {
         Log.d(LOGTAG, "onCurrentSessionChange: " + this.hashCode());
 
         mWidgetManager.setIsServoSession(isInstanceOfServoSession(aSession));

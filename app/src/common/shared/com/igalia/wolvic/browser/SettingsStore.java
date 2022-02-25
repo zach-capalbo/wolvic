@@ -18,12 +18,11 @@ import com.google.gson.reflect.TypeToken;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.mozilla.geckoview.ContentBlocking;
-import org.mozilla.geckoview.GeckoSessionSettings;
 import com.igalia.wolvic.BuildConfig;
 import com.igalia.wolvic.R;
 import com.igalia.wolvic.VRBrowserActivity;
 import com.igalia.wolvic.VRBrowserApplication;
+import com.igalia.wolvic.browser.api.ISessionSettings;
 import com.igalia.wolvic.browser.engine.EngineProvider;
 import com.igalia.wolvic.telemetry.TelemetryService;
 import com.igalia.wolvic.ui.viewmodel.SettingsViewModel;
@@ -44,8 +43,6 @@ import java.util.Map;
 
 import mozilla.components.concept.fetch.Request;
 import mozilla.components.concept.fetch.Response;
-
-import static com.igalia.wolvic.utils.ServoUtils.isServoAvailable;
 
 public class SettingsStore {
 
@@ -82,8 +79,7 @@ public class SettingsStore {
     public final static boolean NOTIFICATIONS_DEFAULT = true;
     public final static boolean SPEECH_DATA_COLLECTION_DEFAULT = false;
     public final static boolean SPEECH_DATA_COLLECTION_REVIEWED_DEFAULT = false;
-    public final static boolean SERVO_DEFAULT = false;
-    public final static int UA_MODE_DEFAULT = GeckoSessionSettings.USER_AGENT_MODE_VR;
+    public final static int UA_MODE_DEFAULT = ISessionSettings.USER_AGENT_MODE_VR;
     public final static int INPUT_MODE_DEFAULT = 1;
     public final static float DISPLAY_DENSITY_DEFAULT = 1.0f;
     public final static int WINDOW_WIDTH_DEFAULT = 800;
@@ -325,16 +321,6 @@ public class SettingsStore {
         editor.commit();
     }
 
-    public boolean isServoEnabled() {
-        return isServoAvailable() && mPrefs.getBoolean(mContext.getString(R.string.settings_key_servo), SERVO_DEFAULT);
-    }
-
-    public void setServoEnabled(boolean isEnabled) {
-        SharedPreferences.Editor editor = mPrefs.edit();
-        editor.putBoolean(mContext.getString(R.string.settings_key_servo), isEnabled);
-        editor.commit();
-    }
-
     public int getUaMode() {
         return mPrefs.getInt(
                 mContext.getString(R.string.settings_key_user_agent_version), UA_MODE_DEFAULT);
@@ -342,7 +328,7 @@ public class SettingsStore {
 
     public void setUaMode(int mode) {
         int checkedMode = mode;
-        if ((mode != GeckoSessionSettings.USER_AGENT_MODE_VR) && (mode != GeckoSessionSettings.USER_AGENT_MODE_MOBILE)) {
+        if ((mode != ISessionSettings.USER_AGENT_MODE_VR) && (mode != ISessionSettings.USER_AGENT_MODE_MOBILE)) {
             Log.e(LOGTAG, "User agent mode: " + mode + " is not supported.");
             checkedMode = UA_MODE_DEFAULT;
         }

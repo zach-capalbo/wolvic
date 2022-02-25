@@ -1,7 +1,7 @@
 package com.igalia.wolvic.browser.content;
 
-import org.mozilla.geckoview.ContentBlocking;
-import org.mozilla.geckoview.ContentBlocking.AntiTracking;
+import com.igalia.wolvic.browser.api.ContentBlocking;
+import com.igalia.wolvic.browser.api.ContentBlocking.AntiTracking;
 
 public class TrackingProtectionPolicy {
 
@@ -15,8 +15,8 @@ public class TrackingProtectionPolicy {
     private static final int STRICT =
             RECOMMENDED | AntiTracking.FINGERPRINTING;
 
-    private int trackingPolicy;
-    private int cookiePolicy;
+    private @ContentBlocking.CBAntiTracking int trackingPolicy;
+    private @ContentBlocking.CBCookieBehavior int cookiePolicy;
 
     private TrackingProtectionPolicy() {
         trackingPolicy = AntiTracking.NONE;
@@ -57,11 +57,11 @@ public class TrackingProtectionPolicy {
         return trackingPolicy == STRICT;
     }
 
-    public int getCookiePolicy() {
+    public @ContentBlocking.CBCookieBehavior int getCookiePolicy() {
         return cookiePolicy;
     }
 
-    public int getAntiTrackingPolicy() {
+    public @ContentBlocking.CBAntiTracking int getAntiTrackingPolicy() {
         return trackingPolicy;
     }
 

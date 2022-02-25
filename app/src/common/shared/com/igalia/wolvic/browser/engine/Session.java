@@ -28,8 +28,17 @@ import com.igalia.wolvic.browser.SettingsStore;
 import com.igalia.wolvic.browser.UserAgentOverride;
 import com.igalia.wolvic.browser.VideoAvailabilityListener;
 import com.igalia.wolvic.browser.api.AllowOrDeny;
+import com.igalia.wolvic.browser.api.Autocomplete;
+import com.igalia.wolvic.browser.api.ContentBlocking;
+import com.igalia.wolvic.browser.api.IDisplay;
 import com.igalia.wolvic.browser.api.IResult;
+import com.igalia.wolvic.browser.api.IRuntime;
 import com.igalia.wolvic.browser.api.ISession;
+import com.igalia.wolvic.browser.api.ISessionSettings;
+import com.igalia.wolvic.browser.api.ISessionState;
+import com.igalia.wolvic.browser.api.SlowScriptResponse;
+import com.igalia.wolvic.browser.api.WebRequestError;
+import com.igalia.wolvic.browser.api.WebResponse;
 import com.igalia.wolvic.browser.content.TrackingProtectionPolicy;
 import com.igalia.wolvic.browser.content.TrackingProtectionStore;
 import com.igalia.wolvic.geolocation.GeolocationData;
@@ -49,9 +58,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static java.util.Objects.requireNonNull;
-import static com.igalia.wolvic.utils.ServoUtils.createServoSession;
-import static com.igalia.wolvic.utils.ServoUtils.isInstanceOfServoSession;
-import static com.igalia.wolvic.utils.ServoUtils.isServoAvailable;
 
 public class Session implements ContentBlocking.Delegate, ISession.NavigationDelegate,
         ISession.ProgressDelegate, ISession.ContentDelegate, ISession.TextInputDelegate,
@@ -82,7 +88,7 @@ public class Session implements ContentBlocking.Delegate, ISession.NavigationDel
     private transient ExternalRequestDelegate mExternalRequestDelegate;
     private transient Context mContext;
     private transient SharedPreferences mPrefs;
-    private transient GeckoRuntime mRuntime;
+    private transient IRuntime mRuntime;
     private transient byte[] mPrivatePage;
     private transient boolean mFirstContentfulPaint;
     private transient long mKeepAlive;
@@ -116,7 +122,7 @@ public class Session implements ContentBlocking.Delegate, ISession.NavigationDel
     static final int SESSION_DO_NOT_OPEN = 1;
 
     @NonNull
-    static Session createWebExtensionSession(Context aContext, GeckoRuntime aRuntime, @NonNull SessionSettings aSettings, @Session.SessionOpenModeFlags int aOpenMode, @NonNull SessionChangeListener listener) {
+    static Session createWebExtensionSession(Context aContext, IRuntime aRuntime, @NonNull SessionSettings aSettings, @Session.SessionOpenModeFlags int aOpenMode, @NonNull SessionChangeListener listener) {
         Session session = new Session(aContext, aRuntime, aSettings);
         session.mState.mIsWebExtensionSession = true;
         session.addSessionChangeListener(listener);
@@ -130,7 +136,7 @@ public class Session implements ContentBlocking.Delegate, ISession.NavigationDel
     }
 
     @NonNull
-    static Session createSession(Context aContext, GeckoRuntime aRuntime, @NonNull SessionSettings aSettings, @Session.SessionOpenModeFlags int aOpenMode, @NonNull SessionChangeListener listener) {
+    static Session createSession(Context aContext, IRuntime aRuntime, @NonNull SessionSettings aSettings, @Session.SessionOpenModeFlags int aOpenMode, @NonNull SessionChangeListener listener) {
         Session session = new Session(aContext, aRuntime, aSettings);
         session.addSessionChangeListener(listener);
         listener.onSessionAdded(session);
@@ -143,21 +149,21 @@ public class Session implements ContentBlocking.Delegate, ISession.NavigationDel
     }
 
     @NonNull
-    static Session createSuspendedSession(Context aContext, GeckoRuntime aRuntime, @NonNull SessionState aRestoreState, @NonNull SessionChangeListener listener) {
+    static Session createSuspendedSession(Context aContext, IRuntime aRuntime, @NonNull SessionState aRestoreState, @NonNull SessionChangeListener listener) {
         Session session = new Session(aContext, aRuntime, aRestoreState);
         session.addSessionChangeListener(listener);
 
         return session;
     }
 
-    private Session(Context aContext, GeckoRuntime aRuntime, @NonNull SessionSettings aSettings) {
+    private Session(Context aContext, IRuntime aRuntime, @NonNull SessionSettings aSettings) {
         mContext = aContext;
         mRuntime = aRuntime;
         initialize();
         mState = createSessionState(aSettings);
     }
 
-    private Session(Context aContext, GeckoRuntime aRuntime, @NonNull SessionState aRestoreState) {
+    private Session(Context aContext, IRuntime aRuntime, @NonNull SessionState aRestoreState) {
         mContext = aContext;
         mRuntime = aRuntime;
         initialize();
@@ -518,9 +524,7 @@ public class Session implements ContentBlocking.Delegate, ISession.NavigationDel
         } else if (mState.mSessionState != null) {
             mState.mSession.restoreState(mState.mSessionState);
             if (mState.mUri != null && mState.mUri.contains(".youtube.com")) {
-                mState.mSession.load(new ISession.Loader()
-                    .uri(mState.mUri)
-                    .flags(ISession.LOAD_FLAGS_REPLACE_HISTORY));
+                mState.mSession.loadUri(mState.mUri, ISession.LOAD_FLAGS_REPLACE_HISTORY);
             }
         } else if (mState.mUri != null) {
             mState.mSession.loadUri(mState.mUri);
@@ -547,24 +551,14 @@ public class Session implements ContentBlocking.Delegate, ISession.NavigationDel
     }
 
     private ISession createISession(@NonNull SessionSettings aSettings) {
-        ISessionSettings geckoSettings = new ISessionSettings.Builder()
-                .usePrivateMode(aSettings.isPrivateBrowsingEnabled())
-                .useTrackingProtection(aSettings.isTrackingProtectionEnabled())
-                .userAgentMode(aSettings.getUserAgentMode())
-                .viewportMode(aSettings.getViewportMode())
-                .suspendMediaWhenInactive(aSettings.isSuspendMediaWhenInactiveEnabled())
-                .build();
+        ISessionSettings values = ISessionSettings.create(aSettings.isPrivateBrowsingEnabled());
+        values.setUseTrackingProtection(aSettings.isTrackingProtectionEnabled());
+        values.setUserAgentMode(aSettings.getUserAgentMode());
+        values.setViewportMode(aSettings.getViewportMode());
+        values.setSuspendMediaWhenInactive(aSettings.isSuspendMediaWhenInactiveEnabled());
+        values.setUserAgentOverride(aSettings.getUserAgentOverride());
 
-        ISession session;
-        if (aSettings.isServoEnabled() && isServoAvailable()) {
-            session = createServoSession(mContext);
-        } else {
-            session = new ISession(geckoSettings);
-        }
-
-        if (session != null) {
-            session.getSettings().setUserAgentOverride(aSettings.getUserAgentOverride());
-        }
+        ISession session = ISession.create(values);
         setupSessionListeners(session);
 
         return session;
@@ -632,7 +626,7 @@ public class Session implements ContentBlocking.Delegate, ISession.NavigationDel
             return;
         }
         try {
-            mState.mDisplay.screenshot().aspectPreservingSize(500).capture().then(bitmap -> {
+            mState.mDisplay.capturePixelsWithAspectPreservingSize(500).then(bitmap -> {
                 if (bitmap != null) {
                     BitmapCache.getInstance(mContext).addBitmap(getId(), bitmap);
                     for (BitmapChangedListener listener: mBitmapChangedListeners) {
@@ -662,7 +656,7 @@ public class Session implements ContentBlocking.Delegate, ISession.NavigationDel
         }
 
         CompletableFuture<Void> result = new CompletableFuture<>();
-        GeckoDisplay display = mState.mSession.acquireDisplay();
+        IDisplay display = mState.mSession.acquireDisplay();
         display.surfaceChanged(captureSurface, displayWidth, displayHeight);
 
         Runnable cleanResources = () -> {
@@ -674,7 +668,7 @@ public class Session implements ContentBlocking.Delegate, ISession.NavigationDel
         };
 
         try {
-            display.screenshot().aspectPreservingSize(500).capture().then(bitmap -> {
+            display.capturePixelsWithAspectPreservingSize(500).then(bitmap -> {
                 if (bitmap != null) {
                     BitmapCache.getInstance(mContext).addBitmap(getId(), bitmap);
                     for (BitmapChangedListener listener : mBitmapChangedListeners) {
@@ -875,9 +869,7 @@ public class Session implements ContentBlocking.Delegate, ISession.NavigationDel
         if (mState.mSession != null) {
             Log.d(LOGTAG, "Loading URI: " + aUri);
             if (mExternalRequestDelegate == null || !mExternalRequestDelegate.onHandleExternalRequest(aUri)) {
-                mState.mSession.load(new ISession.Loader()
-                        .uri(aUri)
-                        .flags(flags));
+                mState.mSession.loadUri(aUri, flags);
             }
         }
     }
@@ -888,34 +880,8 @@ public class Session implements ContentBlocking.Delegate, ISession.NavigationDel
 
     public void loadPrivateBrowsingPage() {
         if (mState.mSession != null) {
-            mState.mSession.load(new ISession.Loader().data(mPrivatePage, "text/html"));
+            mState.mSession.loadData(mPrivatePage, "text/html");
         }
-    }
-
-    public void toggleServo() {
-        if (mState.mSession == null) {
-            return;
-        }
-
-        Log.v("servo", "toggleServo");
-        SessionState previous = mState;
-        String uri = getCurrentUri();
-
-        SessionSettings settings = new SessionSettings.Builder()
-                .withDefaultSettings(mContext)
-                .withServo(!isInstanceOfServoSession(mState.mSession))
-                .build();
-
-        mState = createSessionState(settings);
-        openSession();
-        closeSession(previous);
-
-        mState.setActive(true);
-        for (SessionChangeListener listener: mSessionChangeListeners) {
-            listener.onSessionStateChanged(this, true);
-        }
-
-        loadUri(uri);
     }
 
     public boolean isInFullScreen() {
@@ -982,13 +948,6 @@ public class Session implements ContentBlocking.Delegate, ISession.NavigationDel
 
     // Session Settings
 
-    protected void setServo(final boolean enabled) {
-        mState.mSettings.setServoEnabled(enabled);
-        if (mState.mSession != null && isInstanceOfServoSession(mState.mSession) != enabled) {
-           toggleServo();
-        }
-    }
-
     public int getUaMode() {
         return mState.mSession.getSettings().getUserAgentMode();
     }
@@ -1049,7 +1008,7 @@ public class Session implements ContentBlocking.Delegate, ISession.NavigationDel
         }
         mState.mSession.getSettings().setViewportMode(mState.mSettings.getViewportMode());
         if (overrideUri != null) {
-            mState.mSession.loadUri(overrideUri, ISession.LOAD_FLAGS_BYPASS_CACHE | ISession.LOAD_FLAGS_REPLACE_HISTORY));
+            mState.mSession.loadUri(overrideUri, ISession.LOAD_FLAGS_BYPASS_CACHE | ISession.LOAD_FLAGS_REPLACE_HISTORY);
         } else {
             mState.mSession.reload(ISession.LOAD_FLAGS_BYPASS_CACHE);
         }
@@ -1213,7 +1172,7 @@ public class Session implements ContentBlocking.Delegate, ISession.NavigationDel
     public IResult<String> onLoadError(@NonNull ISession session, @Nullable String uri,  @NonNull WebRequestError error) {
         Log.d(LOGTAG, "Session onLoadError: " + uri);
 
-        return IResult.fromValue(InternalPages.createErrorPageDataURI(mContext, uri, error.code));
+        return IResult.fromValue(InternalPages.createErrorPageDataURI(mContext, uri, error.code()));
     }
 
     // Progress Listener
@@ -1264,7 +1223,7 @@ public class Session implements ContentBlocking.Delegate, ISession.NavigationDel
 
     @Override
     public void onSessionStateChange(@NonNull ISession aSession,
-                                     @NonNull ISession.SessionState aSessionState) {
+                                     @NonNull ISessionState aSessionState) {
         if (mState.mSession == aSession) {
             mState.mSessionState = aSessionState;
         }
@@ -1452,7 +1411,7 @@ public class Session implements ContentBlocking.Delegate, ISession.NavigationDel
     }
 
     @Override
-    public void onContentLoaded(@NonNull ISession ISession, @NonNull ContentBlocking.BlockEvent event) {
+    public void onContentLoaded(@NonNull ISession session, @NonNull ContentBlocking.BlockEvent event) {
         if ((event.getAntiTrackingCategory() & ContentBlocking.AntiTracking.AD) != 0) {
             Log.d(LOGTAG, "Loading Ad: " + event.uri);
         }
@@ -1474,9 +1433,9 @@ public class Session implements ContentBlocking.Delegate, ISession.NavigationDel
 
     @Nullable
     @Override
-    public IResult<PromptResponse> onPopupPrompt(@NonNull ISession ISession, @NonNull PopupPrompt popupPrompt) {
+    public IResult<PromptResponse> onPopupPrompt(@NonNull ISession aSession, @NonNull PopupPrompt popupPrompt) {
         if (mPromptDelegate != null) {
-            return mPromptDelegate.onPopupPrompt(ISession, popupPrompt);
+            return mPromptDelegate.onPopupPrompt(aSession, popupPrompt);
         }
         return IResult.fromValue(popupPrompt.dismiss());
     }
@@ -1564,9 +1523,9 @@ public class Session implements ContentBlocking.Delegate, ISession.NavigationDel
 
     @Nullable
     @Override
-    public IResult<PromptResponse> onLoginSelect(@NonNull ISession ISession, @NonNull AutocompleteRequest<Autocomplete.LoginSelectOption> autocompleteRequest) {
+    public IResult<PromptResponse> onLoginSelect(@NonNull ISession aSession, @NonNull AutocompleteRequest<Autocomplete.LoginSelectOption> autocompleteRequest) {
         if (mPromptDelegate != null) {
-            return mPromptDelegate.onLoginSelect(ISession, autocompleteRequest);
+            return mPromptDelegate.onLoginSelect(aSession, autocompleteRequest);
         }
         return IResult.fromValue(autocompleteRequest.dismiss());
     }
@@ -1580,41 +1539,7 @@ public class Session implements ContentBlocking.Delegate, ISession.NavigationDel
         return IResult.fromValue(autocompleteRequest.dismiss());
     }
 
-    // MediaDelegate
-
-    /*@Override
-    public void onMediaAdd(@NonNull ISession aSession, @NonNull MediaElement element) {
-        if (mState.mSession != aSession) {
-            return;
-        }
-        Media media = new Media(element);
-        mState.mMediaElements.add(media);
-
-        for (VideoAvailabilityListener listener: mVideoAvailabilityListeners) {
-            listener.onVideoAvailabilityChanged(media, true);
-        }
-    }
-
-    @Override
-    public void onMediaRemove(@NonNull ISession aSession, @NonNull MediaElement element) {
-        if (mState.mSession != aSession) {
-            return;
-        }
-        for (int i = 0; i < mState.mMediaElements.size(); ++i) {
-            Media media = mState.mMediaElements.get(i);
-            if (media.getMediaElement() == element) {
-                media.unload();
-                mState.mMediaElements.remove(i);
-                for (VideoAvailabilityListener listener: mVideoAvailabilityListeners) {
-                    listener.onVideoAvailabilityChanged(media, false);
-                }
-                return;
-            }
-        }
-    }*/
-
     // HistoryDelegate
-
     @Override
     public void onHistoryStateChange(@NonNull ISession aSession, @NonNull ISession.HistoryDelegate.HistoryList historyList) {
         if (mState.mSession == aSession) {

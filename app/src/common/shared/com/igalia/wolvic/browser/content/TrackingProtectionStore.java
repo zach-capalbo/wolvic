@@ -1,25 +1,22 @@
 package com.igalia.wolvic.browser.content;
 
+import android.app.Activity;
 import android.app.Application;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.preference.PreferenceManager;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.lifecycle.DefaultLifecycleObserver;
 import androidx.lifecycle.Lifecycle;
 import androidx.lifecycle.LifecycleOwner;
 import androidx.lifecycle.Observer;
 
-import org.json.JSONException;
-import org.json.JSONObject;
-import org.mozilla.geckoview.ContentBlocking;
-import org.mozilla.geckoview.ContentBlockingController;
-import org.mozilla.geckoview.GeckoRuntime;
 import com.igalia.wolvic.R;
 import com.igalia.wolvic.VRBrowserActivity;
 import com.igalia.wolvic.browser.SettingsStore;
+import com.igalia.wolvic.browser.api.ContentBlocking;
+import com.igalia.wolvic.browser.api.IRuntime;
 import com.igalia.wolvic.browser.engine.Session;
 import com.igalia.wolvic.db.SitePermission;
 import com.igalia.wolvic.ui.viewmodel.SitePermissionViewModel;
@@ -27,9 +24,7 @@ import com.igalia.wolvic.ui.viewmodel.SitePermissionViewModel;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
-import static com.igalia.wolvic.db.SitePermission.SITE_PERMISSION_TRACKING;
 
 public class TrackingProtectionStore implements DefaultLifecycleObserver,
         SharedPreferences.OnSharedPreferenceChangeListener {
@@ -47,8 +42,7 @@ public class TrackingProtectionStore implements DefaultLifecycleObserver,
     }
 
     private Context mContext;
-    private GeckoRuntime mRuntime;
-    private ContentBlockingController mContentBlockingController;
+    private IRuntime mRuntime;
     private Lifecycle mLifeCycle;
     private SitePermissionViewModel mViewModel;
     private List<TrackingProtectionListener> mListeners;
@@ -57,10 +51,9 @@ public class TrackingProtectionStore implements DefaultLifecycleObserver,
     private boolean mIsFirstUpdate;
 
     public TrackingProtectionStore(@NonNull Context context,
-                                   @NonNull GeckoRuntime runtime) {
+                                   @NonNull IRuntime runtime) {
         mContext = context;
         mRuntime = runtime;
-        mContentBlockingController = mRuntime.getContentBlockingController();
         mListeners = new ArrayList<>();
         mSitePermissions = new ArrayList<>();
         mIsFirstUpdate = true;
@@ -169,6 +162,8 @@ public class TrackingProtectionStore implements DefaultLifecycleObserver,
             settings.setStrictSocialTrackingProtection(policy.shouldBlockContent());
             settings.setAntiTracking(policy.getAntiTrackingPolicy());
             settings.setCookieBehavior(policy.getCookiePolicy());
+
+            mRuntime.updateTackingProtection(settings);
 
             mListeners.forEach(listener -> listener.onTrackingProtectionLevelUpdated(level));
         }

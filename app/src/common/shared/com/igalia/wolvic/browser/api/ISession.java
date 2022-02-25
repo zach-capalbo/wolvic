@@ -1,15 +1,12 @@
 package com.igalia.wolvic.browser.api;
 
 import android.annotation.TargetApi;
-import android.content.ContentResolver;
 import android.content.Context;
-import android.database.Cursor;
 import android.graphics.RectF;
 import android.net.Uri;
 import android.os.Build;
-import android.util.Log;
 import android.view.PointerIcon;
-import android.view.View;
+import android.view.Surface;
 import android.view.inputmethod.CursorAnchorInfo;
 import android.view.inputmethod.ExtractedText;
 import android.view.inputmethod.ExtractedTextRequest;
@@ -21,17 +18,15 @@ import androidx.annotation.Nullable;
 import androidx.annotation.StringDef;
 import androidx.annotation.UiThread;
 
-import org.json.JSONException;
+import com.igalia.wolvic.browser.api.impl.SessionImpl;
+
 import org.json.JSONObject;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.security.cert.X509Certificate;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 public interface ISession {
 
@@ -1907,7 +1902,6 @@ public interface ISession {
                 this.privateMode = false;
                 this.permission = PERMISSION_GEOLOCATION;
                 this.value = VALUE_ALLOW;
-                this.mPrincipal = "";
                 this.contextId = null;
             }
         }
@@ -1958,14 +1952,14 @@ public interface ISession {
          * @param session ISession instance requesting the permission.
          * @param perm An {@link ISession.PermissionDelegate.ContentPermission} describing the permission being requested and its
          *     current status.
-         * @return A {@link GeckoResult} resolving to one of {@link ISession.PermissionDelegate.ContentPermission#VALUE_PROMPT
+         * @return A {@link IResult} resolving to one of {@link ISession.PermissionDelegate.ContentPermission#VALUE_PROMPT
          *     VALUE_*}, determining the response to the permission request and updating the permissions
          *     for this site.
          */
         @UiThread
-        default @Nullable GeckoResult<Integer> onContentPermissionRequest(
+        default @Nullable IResult<Integer> onContentPermissionRequest(
                 @NonNull final ISession session, @NonNull ISession.PermissionDelegate.ContentPermission perm) {
-            return GeckoResult.fromValue(ISession.PermissionDelegate.ContentPermission.VALUE_PROMPT);
+            return IResult.fromValue(ISession.PermissionDelegate.ContentPermission.VALUE_PROMPT);
         }
 
         class MediaSource {
@@ -2029,9 +2023,71 @@ public interface ISession {
                 id = null;
                 rawId = null;
                 name = null;
-                source = 0;
-                type = 0;
+                source = SOURCE_CAMERA;
+                type = TYPE_VIDEO;
             }
+        }
+
+        /**
+         * Callback interface for notifying the result of a media permission request, including which
+         * media source(s) to use.
+         */
+        interface MediaCallback {
+            /**
+             * Called by the implementation after permissions are granted; the implementation must call
+             * one of grant() or reject() for every request.
+             *
+             * @param video "id" value from the bundle for the video source to use, or null when video is
+             *     not requested.
+             * @param audio "id" value from the bundle for the audio source to use, or null when audio is
+             *     not requested.
+             */
+            @UiThread
+            default void grant(final @Nullable String video, final @Nullable String audio) {}
+
+            /**
+             * Called by the implementation after permissions are granted; the implementation must call
+             * one of grant() or reject() for every request.
+             *
+             * @param video MediaSource for the video source to use (must be an original MediaSource
+             *     object that was passed to the implementation); or null when video is not requested.
+             * @param audio MediaSource for the audio source to use (must be an original MediaSource
+             *     object that was passed to the implementation); or null when audio is not requested.
+             */
+            @UiThread
+            default void grant(final @Nullable ISession.PermissionDelegate.MediaSource video, final @Nullable ISession.PermissionDelegate.MediaSource audio) {}
+
+            /**
+             * Called by the implementation when permissions are not granted; the implementation must call
+             * one of grant() or reject() for every request.
+             */
+            @UiThread
+            default void reject() {}
+        }
+
+        /**
+         * Request content media permissions, including request for which video and/or audio source to
+         * use.
+         *
+         * <p>Media permissions will still be requested if the associated device permissions have been
+         * denied if there are video or audio sources in that category that can still be accessed. It is
+         * the responsibility of consumers to ensure that media permission requests are not displayed in
+         * this case.
+         *
+         * @param session GeckoSession instance requesting the permission.
+         * @param uri The URI of the content requesting the permission.
+         * @param video List of video sources, or null if not requesting video.
+         * @param audio List of audio sources, or null if not requesting audio.
+         * @param callback Callback interface.
+         */
+        @UiThread
+        default void onMediaPermissionRequest(
+                @NonNull final ISession session,
+                @NonNull final String uri,
+                @Nullable final ISession.PermissionDelegate.MediaSource[] video,
+                @Nullable final ISession.PermissionDelegate.MediaSource[] audio,
+                @NonNull final ISession.PermissionDelegate.MediaCallback callback) {
+            callback.reject();
         }
     }
 
@@ -2313,7 +2369,6 @@ public interface ISession {
     })
             /* package */ @interface SelectionActionDelegateHideReason {}
 
-
     /**
      * Load the given URI.
      * @param uri The URI of the resource to load.
@@ -2323,8 +2378,20 @@ public interface ISession {
         loadUri(uri, LOAD_FLAGS_NONE);
     }
 
+    /**
+     * Load the given URI.
+     * @param uri The URI of the resource to load.
+     */
     @AnyThread
     void loadUri(final @NonNull String uri, final @LoadFlags int flags);
+
+    /**
+     * Load the given data.
+     * @param data The data of the resource to load.
+     * @param mymeType The myme type of the resource to load.
+     */
+    @AnyThread
+    void loadData(final @NonNull byte[] data, final String mymeType);
 
     default void reload() {
         reload(LOAD_FLAGS_NONE);
@@ -2454,9 +2521,43 @@ public interface ISession {
     @AnyThread
     void gotoHistoryIndex(final int index);
 
+    /**
+     * Purge history for the session. The session history is used for back and forward history.
+     * Purging the session history means {@link ISession.NavigationDelegate#onCanGoBack(ISession, boolean)}
+     * and {@link ISession.NavigationDelegate#onCanGoForward(ISession, boolean)} will be false.
+     */
+    @AnyThread
+    void purgeHistory();
+
     @AnyThread
     @SuppressWarnings("checkstyle:javadocmethod")
     @NonNull ISessionSettings getSettings();
+
+
+    /** Exits fullscreen mode */
+    @AnyThread
+    void exitFullScreen();
+
+    /**
+     * Acquire the GeckoDisplay instance for providing the session with a drawing Surface. Be sure to
+     * call {@link IDisplay#surfaceChanged(Surface, int, int)} on the acquired display if there is
+     * already a valid Surface.
+     *
+     * @return GeckoDisplay instance.
+     * @see #releaseDisplay(IDisplay)
+     */
+    @UiThread
+    @NonNull IDisplay acquireDisplay();
+
+    /**
+     * Release an acquired GeckoDisplay instance. Be sure to call {@link
+     * IDisplay#surfaceDestroyed()} before releasing the display if it still has a valid Surface.
+     *
+     * @param display Acquired GeckoDisplay instance.
+     * @see #acquireDisplay()
+     */
+    @UiThread
+    void releaseDisplay(final @NonNull IDisplay display);
 
 
     /**
@@ -2613,4 +2714,14 @@ public interface ISession {
     @AnyThread
     @Nullable
     ISession.SelectionActionDelegate getSelectionActionDelegate();
+
+
+
+    static ISession create() {
+        return create(null);
+    }
+
+    static ISession create(@Nullable ISessionSettings settings) {
+        return new SessionImpl(settings);
+    }
 }

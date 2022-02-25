@@ -8,9 +8,6 @@ import android.util.Pair;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import org.mozilla.geckoview.GeckoResult;
-import org.mozilla.geckoview.GeckoRuntime;
-import org.mozilla.geckoview.GeckoSession;
 import com.igalia.wolvic.BuildConfig;
 import com.igalia.wolvic.R;
 import com.igalia.wolvic.VRBrowserApplication;
@@ -20,7 +17,10 @@ import com.igalia.wolvic.browser.PermissionDelegate;
 import com.igalia.wolvic.browser.Services;
 import com.igalia.wolvic.browser.SessionChangeListener;
 import com.igalia.wolvic.browser.adapter.ComponentsAdapter;
-import com.igalia.wolvic.browser.components.GeckoWebExtensionRuntime;
+import com.igalia.wolvic.browser.api.IResult;
+import com.igalia.wolvic.browser.api.IRuntime;
+import com.igalia.wolvic.browser.api.ISession;
+import com.igalia.wolvic.browser.components.WolvicWebExtensionRuntime;
 import com.igalia.wolvic.browser.content.TrackingProtectionStore;
 import com.igalia.wolvic.browser.extensions.BuiltinExtension;
 import com.igalia.wolvic.db.SitePermission;
@@ -43,7 +43,7 @@ import mozilla.components.feature.webcompat.reporter.WebCompatReporterFeature;
 import mozilla.components.lib.state.Store;
 
 public class SessionStore implements
-        GeckoSession.PermissionDelegate,
+        ISession.PermissionDelegate,
         SessionChangeListener,
         ComponentsAdapter.StoreUpdatesListener {
 
@@ -66,7 +66,7 @@ public class SessionStore implements
 
     private Executor mMainExecutor;
     private Context mContext;
-    private GeckoRuntime mRuntime;
+    private IRuntime mRuntime;
     private ArrayList<Session> mSessions;
     private Session mActiveSession;
     private PermissionDelegate mPermissionDelegate;
@@ -75,7 +75,7 @@ public class SessionStore implements
     private Services mServices;
     private boolean mSuspendPending;
     private TrackingProtectionStore mTrackingProtectionStore;
-    private GeckoWebExtensionRuntime mWebExtensionRuntime;
+    private WolvicWebExtensionRuntime mWebExtensionRuntime;
     private FxaWebChannelFeature mWebChannelsFeature;
     private Store.Subscription mStoreSubscription;
 
@@ -97,7 +97,7 @@ public class SessionStore implements
                     String currentSessionHost = UrlUtils.getHost(existingSession.getCurrentUri());
                     String sessionHost = UrlUtils.getHost(url);
                     if (currentSessionHost.equals(sessionHost) && existingSession.isPrivateMode() == isPrivate) {
-                        existingSession.reload(GeckoSession.LOAD_FLAGS_BYPASS_CACHE);
+                        existingSession.reload(ISession.LOAD_FLAGS_BYPASS_CACHE);
                     }
                 });
             }
@@ -107,7 +107,7 @@ public class SessionStore implements
                 mSessions.forEach(session -> {
                     if (session.isActive()) {
                         session.updateTrackingProtection();
-                        session.reload(GeckoSession.LOAD_FLAGS_BYPASS_CACHE);
+                        session.reload(ISession.LOAD_FLAGS_BYPASS_CACHE);
                     } else {
                         session.suspend();
                     }
@@ -115,7 +115,7 @@ public class SessionStore implements
             }
         });
 
-        mWebExtensionRuntime = new GeckoWebExtensionRuntime(mContext, mRuntime);
+        mWebExtensionRuntime = new WolvicWebExtensionRuntime(mContext, mRuntime);
 
         mServices = ((VRBrowserApplication)context.getApplicationContext()).getServices();
 
@@ -281,8 +281,8 @@ public class SessionStore implements
         return mSessions.stream().filter(session -> session.getId().equals(aId)).findFirst().orElse(null);
     }
 
-    public @Nullable Session getSession(GeckoSession aGeckoSession) {
-        return mSessions.stream().filter(session -> session.getGeckoSession() == aGeckoSession).findFirst().orElse(null);
+    public @Nullable Session getSession(ISession aISession) {
+        return mSessions.stream().filter(session -> session.getISession() == aISession).findFirst().orElse(null);
     }
 
     public @NonNull List<Session> getSessionsByHost(@NonNull String aHost, boolean aIsPrivate) {
@@ -321,7 +321,7 @@ public class SessionStore implements
         int inactiveCount = 0;
         int suspendedCount = 0;
         for(Session session: mSessions) {
-            if (session.getGeckoSession() != null) {
+            if (session.getISession() != null) {
                 count++;
                 if (session.isActive()) {
                     activeCount++;
@@ -333,7 +333,7 @@ public class SessionStore implements
             }
         }
         if (count > MAX_GECKO_SESSIONS) {
-            Log.d(LOGTAG, "Too many GeckoSessions. Active: " + activeCount + " Inactive: " + inactiveCount + " Suspended: " + suspendedCount);
+            Log.d(LOGTAG, "Too many sessions. Active: " + activeCount + " Inactive: " + inactiveCount + " Suspended: " + suspendedCount);
             mSuspendPending = true;
             mMainExecutor.execute(this::limitInactiveSessions);
         }
@@ -371,7 +371,7 @@ public class SessionStore implements
         return mTrackingProtectionStore;
     }
 
-    public GeckoWebExtensionRuntime getWebExtensionRuntime() {
+    public WolvicWebExtensionRuntime getWebExtensionRuntime() {
         return mWebExtensionRuntime;
     }
 
@@ -413,14 +413,6 @@ public class SessionStore implements
         mBookmarksStore.onConfigurationChanged();
     }
 
-    // Session Settings
-
-    public void setServo(final boolean enabled) {
-        for (Session session: mSessions) {
-            session.setServo(enabled);
-        }
-    }
-
     // Runtime Settings
 
     public void setConsoleOutputEnabled(boolean enabled) {
@@ -444,12 +436,12 @@ public class SessionStore implements
     public void clearCache(long clearFlags) {
         LinkedList<Session> activeSession = new LinkedList<>();
         for (Session session: mSessions) {
-            if (session.getGeckoSession() != null) {
+            if (session.getISession() != null) {
                 session.suspend();
                 activeSession.add(session);
             }
         }
-        mRuntime.getStorageController().clearData(clearFlags).then(aVoid -> {
+        mRuntime.clearData(clearFlags).then(aVoid -> {
             for (Session session: activeSession) {
                 session.recreateSession();
             }
@@ -460,22 +452,22 @@ public class SessionStore implements
     // Permission Delegate
 
     @Override
-    public void onAndroidPermissionsRequest(@NonNull GeckoSession session, @Nullable String[] permissions, @NonNull Callback callback) {
+    public void onAndroidPermissionsRequest(@NonNull ISession session, @Nullable String[] permissions, @NonNull Callback callback) {
         if (mPermissionDelegate != null) {
             mPermissionDelegate.onAndroidPermissionsRequest(session, permissions, callback);
         }
     }
 
     @Override
-    public GeckoResult<Integer> onContentPermissionRequest(@NonNull GeckoSession session, @NonNull ContentPermission perm) {
+    public IResult<Integer> onContentPermissionRequest(@NonNull ISession session, @NonNull ContentPermission perm) {
         if (mPermissionDelegate != null) {
             return mPermissionDelegate.onContentPermissionRequest(session, perm);
         }
-        return GeckoResult.fromValue(ContentPermission.VALUE_DENY);
+        return IResult.fromValue(ContentPermission.VALUE_DENY);
     }
 
     @Override
-    public void onMediaPermissionRequest(@NonNull GeckoSession session, @NonNull String uri, @Nullable MediaSource[] video, @Nullable MediaSource[] audio, @NonNull MediaCallback callback) {
+    public void onMediaPermissionRequest(@NonNull ISession session, @NonNull String uri, @Nullable MediaSource[] video, @Nullable MediaSource[] audio, @NonNull MediaCallback callback) {
         if (mPermissionDelegate != null) {
             mPermissionDelegate.onMediaPermissionRequest(session, uri, video, audio, callback);
         }
@@ -523,7 +515,7 @@ public class SessionStore implements
     }
 
     @Override
-    public void onCurrentSessionChange(GeckoSession aOldSession, GeckoSession aSession) {
+    public void onCurrentSessionChange(ISession aOldSession, ISession aSession) {
         Session oldSession = getSession(aOldSession);
         Session newSession = getSession(aSession);
         if (oldSession != null) {

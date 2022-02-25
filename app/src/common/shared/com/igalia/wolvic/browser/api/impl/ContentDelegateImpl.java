@@ -12,6 +12,8 @@ import org.mozilla.geckoview.GeckoSession;
 import org.mozilla.geckoview.SlowScriptResponse;
 import org.mozilla.geckoview.WebResponse;
 
+import java.io.InputStream;
+import java.security.cert.X509Certificate;
 import java.util.Objects;
 
 class ContentDelegateImpl implements GeckoSession.ContentDelegate {
@@ -82,7 +84,34 @@ class ContentDelegateImpl implements GeckoSession.ContentDelegate {
 
     @Override
     public void onExternalResponse(@NonNull GeckoSession session, @NonNull WebResponse response) {
-        mDelegate.onExternalResponse(mSession, response);
+        mDelegate.onExternalResponse(mSession, new com.igalia.wolvic.browser.api.WebResponse() {
+            @Override
+            public int statusCode() {
+                return response.statusCode;
+            }
+
+            @Override
+            public boolean redirected() {
+                return response.redirected;
+            }
+
+            @Override
+            public boolean isSecure() {
+                return response.isSecure;
+            }
+
+            @Nullable
+            @Override
+            public X509Certificate certificate() {
+                return response.certificate;
+            }
+
+            @Nullable
+            @Override
+            public InputStream body() {
+                return response.body;
+            }
+        });
     }
 
     @Override

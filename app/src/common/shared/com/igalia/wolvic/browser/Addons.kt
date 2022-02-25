@@ -26,7 +26,7 @@ import org.mozilla.geckoview.GeckoSession
 import com.igalia.wolvic.BuildConfig
 import com.igalia.wolvic.R
 import com.igalia.wolvic.browser.adapter.ComponentsAdapter
-import com.igalia.wolvic.browser.components.GeckoEngineSession
+import com.igalia.wolvic.browser.components.WolvicEngineSession
 import com.igalia.wolvic.browser.engine.EngineProvider
 import com.igalia.wolvic.browser.engine.Session
 import com.igalia.wolvic.browser.engine.SessionStore
@@ -94,7 +94,7 @@ class Addons(val context: Context, private val sessionStore: SessionStore) {
                     false,
                     onNewTabOverride = {
                         _, engineSession, url ->
-                        val session = sessionStore.getSession((engineSession as GeckoEngineSession).geckoSession)
+                        val session = sessionStore.getSession((engineSession as WolvicEngineSession).geckoSession)
                         session?.loadUri(url, GeckoSession.LOAD_FLAGS_REPLACE_HISTORY)
                         session!!.id
                     },

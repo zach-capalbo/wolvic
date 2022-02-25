@@ -6,7 +6,6 @@ import android.text.Spannable;
 import android.text.SpannableString;
 import android.text.style.ForegroundColorSpan;
 import android.util.TypedValue;
-import android.view.View;
 import android.webkit.URLUtil;
 
 import androidx.annotation.NonNull;
@@ -22,8 +21,6 @@ import org.mozilla.geckoview.ContentBlocking;
 import com.igalia.wolvic.R;
 import com.igalia.wolvic.browser.SettingsStore;
 import com.igalia.wolvic.ui.widgets.Windows;
-import com.igalia.wolvic.utils.DeviceType;
-import com.igalia.wolvic.utils.ServoUtils;
 import com.igalia.wolvic.utils.UrlUtils;
 
 import java.io.UnsupportedEncodingException;

@@ -36,6 +36,7 @@ import com.igalia.wolvic.audio.AudioEngine;
 import com.igalia.wolvic.browser.Media;
 import com.igalia.wolvic.browser.SessionChangeListener;
 import com.igalia.wolvic.browser.SettingsStore;
+import com.igalia.wolvic.browser.api.ISession;
 import com.igalia.wolvic.browser.content.TrackingProtectionStore;
 import com.igalia.wolvic.browser.engine.Session;
 import com.igalia.wolvic.browser.engine.SessionStore;
@@ -947,7 +948,7 @@ public class NavigationBarWidget extends UIWidget implements GeckoSession.Naviga
     // Session.SessionChangeListener
 
     @Override
-    public void onCurrentSessionChange(GeckoSession aOldSession, GeckoSession aSession) {
+    public void onCurrentSessionChange(ISession aOldSession, ISession aSession) {
         boolean isFullScreen = getSession().isInFullScreen();
         if (isFullScreen && !mAttachedWindow.isFullScreen()) {
             enterFullScreenMode();

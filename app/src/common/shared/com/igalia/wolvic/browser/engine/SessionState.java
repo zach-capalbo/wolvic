@@ -11,8 +11,8 @@ import com.google.gson.reflect.TypeToken;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
 
-import org.mozilla.geckoview.GeckoDisplay;
 import com.igalia.wolvic.browser.Media;
+import com.igalia.wolvic.browser.api.IDisplay;
 import com.igalia.wolvic.browser.api.ISession;
 import com.igalia.wolvic.browser.api.ISessionState;
 
@@ -51,13 +51,13 @@ public class SessionState {
     public String mTitle = "";
     public transient boolean mFullScreen;
     public transient ISession mSession;
-    public transient GeckoDisplay mDisplay;
+    public transient IDisplay mDisplay;
     public SessionSettings mSettings;
     public transient ArrayList<Media> mMediaElements = new ArrayList<>();
     public transient @WebXRState int mWebXRState = WEBXR_UNUSED;
     public transient @PopupState int mPopUpState = POPUP_UNUSED;
     public transient @DrmState int mDrmState = DRM_UNUSED;
-    @JsonAdapter(SessionState.GeckoSessionStateAdapter.class)
+    @JsonAdapter(SessionState.ISessionStateAdapter.class)
     public ISessionState mSessionState;
     public long mLastUse;
     public String mRegion;

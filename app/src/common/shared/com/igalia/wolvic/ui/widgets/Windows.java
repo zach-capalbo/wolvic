@@ -21,7 +21,7 @@ import com.igalia.wolvic.browser.Media;
 import com.igalia.wolvic.browser.Services;
 import com.igalia.wolvic.browser.SettingsStore;
 import com.igalia.wolvic.browser.adapter.ComponentsAdapter;
-import com.igalia.wolvic.browser.components.GeckoEngineSession;
+import com.igalia.wolvic.browser.components.WolvicEngineSession;
 import com.igalia.wolvic.browser.engine.Session;
 import com.igalia.wolvic.browser.engine.SessionState;
 import com.igalia.wolvic.browser.engine.SessionStore;
@@ -1310,7 +1310,7 @@ public void selectTab(@NonNull Session aTab) {
             Session currentWindowSession = targetWindow.getSession();
             Session popUpSession = ComponentsAdapter.get().getStore().getState().getExtensions().values().stream()
                     .filter(extensionState -> extensionState.getPopupSession() != null)
-                    .map(extensionState -> ((GeckoEngineSession) extensionState.getPopupSession()).getSession())
+                    .map(extensionState -> ((WolvicEngineSession) extensionState.getPopupSession()).getSession())
                     .findFirst().orElse(null);
             Session parentPopupSession = null;
             if (popUpSession != null) {
