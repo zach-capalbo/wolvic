@@ -9,6 +9,7 @@ import com.igalia.wolvic.browser.api.IRuntime;
 import com.igalia.wolvic.browser.api.ISession;
 import com.igalia.wolvic.browser.api.ISessionSettings;
 import com.igalia.wolvic.browser.api.ISessionState;
+import com.igalia.wolvic.browser.api.ITextInput;
 import com.igalia.wolvic.browser.api.MediaSession;
 import org.mozilla.geckoview.GeckoSession;
 
@@ -17,7 +18,14 @@ public class SessionImpl implements ISession {
     private ISessionSettings mSettings;
     private ISession.ContentDelegate mContentDelegate;
     private ISession.SelectionActionDelegate mSelectionActionDelegate;
+    private ISession.PermissionDelegate mPermissionDelegate;
+    private ISession.ProgressDelegate mProgressDelegate;
+    private ISession.NavigationDelegate mNavigationDelegate;
+    private ISession.ScrollDelegate mScrollDelegate;
+    private ISession.HistoryDelegate mHistoryDelegate;
+    private ContentBlocking.Delegate mContentBlockingDelegate;
     private MediaSession.Delegate mMediaSessionDelegate;
+    private TextInputImpl mTextInput;
 
     public SessionImpl(@Nullable ISessionSettings settings) {
         if (settings == null) {
@@ -26,6 +34,7 @@ public class SessionImpl implements ISession {
             mSession = new GeckoSession(((SettingsImpl)settings).getGeckoSettings());
         }
         mSettings = new SettingsImpl(mSession.getSettings());
+        mTextInput = new TextInputImpl(this);
     }
 
     public @NonNull GeckoSession getGeckoSession() {
@@ -127,6 +136,12 @@ public class SessionImpl implements ISession {
         mSession.restoreState(((SessionStateImpl)state).getGeckoState());
     }
 
+    @NonNull
+    @Override
+    public ITextInput getTextInput() {
+        return mTextInput;
+    }
+
     @Override
     public void setContentDelegate(@Nullable ContentDelegate delegate) {
         if (mContentDelegate == delegate) {
@@ -147,58 +162,117 @@ public class SessionImpl implements ISession {
     }
 
     @Override
-    public void setProgressDelegate(@Nullable ProgressDelegate delegate) {
+    public void setPermissionDelegate(@Nullable PermissionDelegate delegate) {
+        if (mPermissionDelegate == delegate) {
+            return;
+        }
+        mPermissionDelegate = delegate;
+        if (mPermissionDelegate == null) {
+            mSession.setPermissionDelegate(null);
+        } else {
+            mSession.setPermissionDelegate(new PermissionDelegateImpl(mPermissionDelegate, this));
+        }
+    }
 
+    @Nullable
+    @Override
+    public PermissionDelegate getPermissionDelegate() {
+        return mPermissionDelegate;
+    }
+
+    @Override
+    public void setProgressDelegate(@Nullable ProgressDelegate delegate) {
+        if (mProgressDelegate == delegate) {
+            return;
+        }
+        mProgressDelegate = delegate;
+        if (mProgressDelegate == null) {
+            mSession.setProgressDelegate(null);
+        } else {
+            mSession.setProgressDelegate(new ProgressDelegateImpl(mProgressDelegate, this));
+        }
     }
 
     @Nullable
     @Override
     public ProgressDelegate getProgressDelegate() {
-        return null;
+        return mProgressDelegate;
     }
 
     @Override
     public void setNavigationDelegate(@Nullable NavigationDelegate delegate) {
-
+        if (mNavigationDelegate == delegate) {
+            return;
+        }
+        mNavigationDelegate = delegate;
+        if (mNavigationDelegate == null) {
+            mSession.setNavigationDelegate(null);
+        } else {
+            mSession.setNavigationDelegate(new NavigationDelegateImpl(mNavigationDelegate, this));
+        }
     }
 
     @Nullable
     @Override
     public NavigationDelegate getNavigationDelegate() {
-        return null;
+        return mNavigationDelegate;
     }
 
     @Override
     public void setScrollDelegate(@Nullable ScrollDelegate delegate) {
-
+        if (mScrollDelegate == delegate) {
+            return;
+        }
+        mScrollDelegate = delegate;
+        if (mScrollDelegate == null) {
+            mSession.setScrollDelegate(null);
+        } else {
+            mSession.setScrollDelegate(new ScrollDelegateImpl(mScrollDelegate, this));
+        }
     }
 
     @Nullable
     @Override
     public ScrollDelegate getScrollDelegate() {
-        return null;
+        return mScrollDelegate;
     }
 
     @Override
     public void setHistoryDelegate(@Nullable HistoryDelegate delegate) {
-
+        if (mHistoryDelegate == delegate) {
+            return;
+        }
+        mHistoryDelegate = delegate;
+        if (mHistoryDelegate == null) {
+            mSession.setHistoryDelegate(null);
+        } else {
+            mSession.setHistoryDelegate(new HistoryDelegateImpl(mHistoryDelegate, this));
+        }
     }
 
     @Nullable
     @Override
     public HistoryDelegate getHistoryDelegate() {
-        return null;
+        return mHistoryDelegate;
     }
 
     @Override
     public void setContentBlockingDelegate(@Nullable ContentBlocking.Delegate delegate) {
-
+        if (mContentBlockingDelegate == delegate) {
+            return;
+        }
+        mContentBlockingDelegate = delegate;
+        if (mContentBlockingDelegate == null) {
+            mSession.setContentBlockingDelegate(null);
+        } else {
+            mSession.setContentBlockingDelegate(new ContentBlockingDelegateImpl(mHistoryDelegate, this));
+        }
     }
 
     @Nullable
     @Override
     public ContentBlocking.Delegate getContentBlockingDelegate() {
-        return null;
+        return mContentBlockingDelegate;
     }
 
     @Override

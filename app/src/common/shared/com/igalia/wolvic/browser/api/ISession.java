@@ -21,6 +21,7 @@ import androidx.annotation.UiThread;
 import com.igalia.wolvic.browser.api.impl.SessionImpl;
 
 import org.json.JSONObject;
+import org.mozilla.geckoview.SessionTextInput;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -324,7 +325,7 @@ public interface ISession {
         default void onShowDynamicToolbar(@NonNull final ISession ISession) {}
     }
 
-    public interface NavigationDelegate {
+    interface NavigationDelegate {
         /**
          * A view has started loading content from the network.
          *
@@ -361,18 +362,18 @@ public interface ISession {
         int LOAD_REQUEST_IS_REDIRECT = 0x800000;
 
         /** Load request details. */
-        public static class LoadRequest {
-            /* package */ LoadRequest(
+        class LoadRequest {
+            public LoadRequest(
                     @NonNull final String uri,
                     @Nullable final String triggerUri,
                     final int target,
-                    final int flags,
+                    final boolean isRedirect,
                     final boolean hasUserGesture,
                     final boolean isDirectNavigation) {
                 this.uri = uri;
                 this.triggerUri = triggerUri;
                 this.target = target;
-                this.isRedirect = (flags & LOAD_REQUEST_IS_REDIRECT) != 0;
+                this.isRedirect = isRedirect;
                 this.hasUserGesture = hasUserGesture;
                 this.isDirectNavigation = isDirectNavigation;
             }
@@ -571,6 +572,17 @@ public interface ISession {
              */
             public final @ContentType int mixedModeActive;
 
+            public SecurityInformation(boolean isSecure, boolean isException, @Nullable String origin, @NonNull String host, @Nullable X509Certificate certificate, int securityMode, int mixedModePassive, int mixedModeActive) {
+                this.isSecure = isSecure;
+                this.isException = isException;
+                this.origin = origin;
+                this.host = host;
+                this.certificate = certificate;
+                this.securityMode = securityMode;
+                this.mixedModePassive = mixedModePassive;
+                this.mixedModeActive = mixedModeActive;
+            }
+
             /** Empty constructor for tests */
             protected SecurityInformation() {
                 mixedModePassive = CONTENT_UNKNOWN;
@@ -671,7 +683,7 @@ public interface ISession {
          * A representation of browser history, accessible as a `List`. The list itself and its entries
          * are immutable; any attempt to mutate will result in an `UnsupportedOperationException`.
          */
-        interface HistoryList extends List<ISession.HistoryDelegate.HistoryItem> {
+        interface HistoryList {
             /**
              * Get the current index in browser history.
              *
@@ -679,6 +691,14 @@ public interface ISession {
              */
             @AnyThread
             int getCurrentIndex();
+
+            /**
+             * Get the list of HistoryItem in browser history.
+             *
+             * @return A List of HistoryItems.
+             */
+            @AnyThread
+            List<ISession.HistoryDelegate.HistoryItem> getItems();
         }
 
         // These flags are similar to those in `IHistory::LoadFlags`, but we use
@@ -1345,7 +1365,7 @@ public interface ISession {
              *     associated with this prompt.
              */
             @UiThread
-            public @NonNull
+            @NonNull
             ISession.PromptDelegate.PromptResponse confirm(@ShareResult final int response);
 
             /**
@@ -1355,7 +1375,7 @@ public interface ISession {
              *     associated with this prompt.
              */
             @UiThread
-            public @NonNull
+            @NonNull
             ISession.PromptDelegate.PromptResponse dismiss();
         }
 
@@ -1375,7 +1395,7 @@ public interface ISession {
              *     associated with this prompt.
              */
             @UiThread
-            public @NonNull
+            @NonNull
             ISession.PromptDelegate.PromptResponse confirm(final @NonNull Autocomplete.Option<?> selection);
 
             /**
@@ -1385,7 +1405,7 @@ public interface ISession {
              *     associated with this prompt.
              */
             @UiThread
-            public @NonNull
+            @NonNull
             ISession.PromptDelegate.PromptResponse dismiss();
         }
 
@@ -1856,9 +1876,18 @@ public interface ISession {
          * permission, the URL the permission pertains to, and other information.
          */
         class ContentPermission {
+            public ContentPermission(@NonNull String uri, @Nullable String thirdPartyOrigin, boolean privateMode, @Permission  int permission, @Value int value, @Nullable String contextId) {
+                this.uri = uri;
+                this.thirdPartyOrigin = thirdPartyOrigin;
+                this.privateMode = privateMode;
+                this.permission = permission;
+                this.value = value;
+                this.contextId = contextId;
+            }
+
             @Retention(RetentionPolicy.SOURCE)
             @IntDef({VALUE_PROMPT, VALUE_DENY, VALUE_ALLOW})
-                    /* package */ @interface Value {}
+                    public @interface Value {}
 
             /** The corresponding permission is currently set to default/prompt behavior. */
             public static final int VALUE_PROMPT = 3;
@@ -1884,7 +1913,7 @@ public interface ISession {
             public final boolean privateMode;
 
             /** The type of this permission; one of {@link #PERMISSION_GEOLOCATION PERMISSION_*}. */
-            public final int permission;
+            public final @Permission int permission;
 
             /** The value of the permission; one of {@link #VALUE_PROMPT VALUE_}. */
             public final @Value int value;
@@ -1895,15 +1924,6 @@ public interface ISession {
              * @see ISessionSettings.Builder#contextId
              */
             public final @Nullable String contextId;
-
-            protected ContentPermission() {
-                this.uri = "";
-                this.thirdPartyOrigin = null;
-                this.privateMode = false;
-                this.permission = PERMISSION_GEOLOCATION;
-                this.value = VALUE_ALLOW;
-                this.contextId = null;
-            }
         }
 
         /** Callback interface for notifying the result of a permission request. */
@@ -2017,6 +2037,14 @@ public interface ISession {
 
             /** An int giving the type of media, must be either TYPE_VIDEO or TYPE_AUDIO. */
             public final @Type int type;
+
+            public MediaSource(@NonNull String id, @NonNull String rawId, @Nullable String name, @Source int source, @Type int type) {
+                this.id = id;
+                this.rawId = rawId;
+                this.name = name;
+                this.source = source;
+                this.type = type;
+            }
 
             /** Empty constructor for tests. */
             protected MediaSource() {
@@ -2570,6 +2598,17 @@ public interface ISession {
     @AnyThread
     void restoreState(final @NonNull ISessionState state);
 
+
+    /**
+     * Get the SessionTextInput instance for this session. May be called on any thread.
+     *
+     * @return SessionTextInput instance.
+     */
+    @AnyThread
+    @NonNull
+    ITextInput getTextInput();
+
+
     /**
      * Set the content callback handler. This will replace the current handler.
      *
@@ -2586,6 +2625,23 @@ public interface ISession {
     @UiThread
     @Nullable
     ISession.ContentDelegate getContentDelegate();
+
+    /**
+     * Set the content callback handler. This will replace the current handler.
+     *
+     * @param delegate An implementation of PermissionDelegate.
+     */
+    @UiThread
+    void setPermissionDelegate(final @Nullable ISession.PermissionDelegate delegate);
+
+    /**
+     * Get the content callback handler.
+     *
+     * @return The current content callback handler.
+     */
+    @UiThread
+    @Nullable
+    ISession.PermissionDelegate getPermissionDelegate();
 
     /**
      * Set the progress callback handler. This will replace the current handler.

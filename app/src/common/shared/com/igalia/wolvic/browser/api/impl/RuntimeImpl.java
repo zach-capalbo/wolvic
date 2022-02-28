@@ -66,12 +66,12 @@ public class RuntimeImpl implements IRuntime {
     @Override
     public void updateTackingProtection(@NonNull com.igalia.wolvic.browser.api.ContentBlocking.Settings settings) {
         ContentBlocking.Settings cb =  mRuntime.getSettings().getContentBlocking();
-        cb.setAntiTracking(toGeckoAntitracking(settings.getAntiTracking()));
-        cb.setCookieBehavior(toGeckoCookieBehavior(settings.getCookieBehavior()));
-        cb.setCookieBehaviorPrivateMode(toGeckoCookieBehavior(settings.getCookieBehavior()));
-        cb.setCookieLifetime(toGeckoCookieLifetime(settings.getCookieLifetime()));
-        cb.setSafeBrowsing(toGeckoSafeBrowsing(settings.getSafeBrowsing()));
-        cb.setEnhancedTrackingProtectionLevel(toGeckoEtpLevel(settings.getEnhancedTrackingProtectionLevel()));
+        cb.setAntiTracking(ContentBlockingDelegateImpl.toGeckoAntitracking(settings.getAntiTracking()));
+        cb.setCookieBehavior(ContentBlockingDelegateImpl.toGeckoCookieBehavior(settings.getCookieBehavior()));
+        cb.setCookieBehaviorPrivateMode(ContentBlockingDelegateImpl.toGeckoCookieBehavior(settings.getCookieBehavior()));
+        cb.setCookieLifetime(ContentBlockingDelegateImpl.toGeckoCookieLifetime(settings.getCookieLifetime()));
+        cb.setSafeBrowsing(ContentBlockingDelegateImpl.toGeckoSafeBrowsing(settings.getSafeBrowsing()));
+        cb.setEnhancedTrackingProtectionLevel(ContentBlockingDelegateImpl.toGeckoEtpLevel(settings.getEnhancedTrackingProtectionLevel()));
     }
 
     @NonNull
@@ -86,98 +86,7 @@ public class RuntimeImpl implements IRuntime {
         return mWebExtensionController;
     }
 
-    private int toGeckoAntitracking(@com.igalia.wolvic.browser.api.ContentBlocking.CBAntiTracking int flags) {
-        switch (flags) {
-            case com.igalia.wolvic.browser.api.ContentBlocking.AntiTracking.AD:
-                return ContentBlocking.AntiTracking.AD;
-            case com.igalia.wolvic.browser.api.ContentBlocking.AntiTracking.ANALYTIC:
-                return ContentBlocking.AntiTracking.ANALYTIC;
-            case com.igalia.wolvic.browser.api.ContentBlocking.AntiTracking.CONTENT:
-                return ContentBlocking.AntiTracking.CONTENT;
-            case com.igalia.wolvic.browser.api.ContentBlocking.AntiTracking.CRYPTOMINING:
-                return ContentBlocking.AntiTracking.CRYPTOMINING;
-            case com.igalia.wolvic.browser.api.ContentBlocking.AntiTracking.DEFAULT:
-                return ContentBlocking.AntiTracking.DEFAULT;
-            case com.igalia.wolvic.browser.api.ContentBlocking.AntiTracking.FINGERPRINTING:
-                return ContentBlocking.AntiTracking.FINGERPRINTING;
-            case com.igalia.wolvic.browser.api.ContentBlocking.AntiTracking.NONE:
-                return ContentBlocking.AntiTracking.NONE;
-            case com.igalia.wolvic.browser.api.ContentBlocking.AntiTracking.SOCIAL:
-                return ContentBlocking.AntiTracking.SOCIAL;
-            case com.igalia.wolvic.browser.api.ContentBlocking.AntiTracking.STP:
-                return ContentBlocking.AntiTracking.STP;
-            case com.igalia.wolvic.browser.api.ContentBlocking.AntiTracking.STRICT:
-                return ContentBlocking.AntiTracking.STRICT;
-            case com.igalia.wolvic.browser.api.ContentBlocking.AntiTracking.TEST:
-                return ContentBlocking.AntiTracking.TEST;
-        }
-
-        throw new RuntimeException("Unreachable code");
-    }
-
-    private int toGeckoSafeBrowsing(@com.igalia.wolvic.browser.api.ContentBlocking.CBSafeBrowsing int flags) {
-        switch (flags) {
-            case com.igalia.wolvic.browser.api.ContentBlocking.SafeBrowsing.DEFAULT:
-                return ContentBlocking.SafeBrowsing.DEFAULT;
-            case com.igalia.wolvic.browser.api.ContentBlocking.SafeBrowsing.HARMFUL:
-                return ContentBlocking.SafeBrowsing.HARMFUL;
-            case com.igalia.wolvic.browser.api.ContentBlocking.SafeBrowsing.MALWARE:
-                return ContentBlocking.SafeBrowsing.MALWARE;
-            case com.igalia.wolvic.browser.api.ContentBlocking.SafeBrowsing.NONE:
-                return ContentBlocking.SafeBrowsing.NONE;
-            case com.igalia.wolvic.browser.api.ContentBlocking.SafeBrowsing.PHISHING:
-                return ContentBlocking.SafeBrowsing.PHISHING;
-            case com.igalia.wolvic.browser.api.ContentBlocking.SafeBrowsing.UNWANTED:
-                return ContentBlocking.SafeBrowsing.UNWANTED;
-        }
-
-        throw new RuntimeException("Unreachable code");
-    }
-
-    private int toGeckoCookieBehavior(@com.igalia.wolvic.browser.api.ContentBlocking.CBCookieBehavior int flags) {
-        switch (flags) {
-            case com.igalia.wolvic.browser.api.ContentBlocking.CookieBehavior.ACCEPT_ALL:
-                return ContentBlocking.CookieBehavior.ACCEPT_ALL;
-            case com.igalia.wolvic.browser.api.ContentBlocking.CookieBehavior.ACCEPT_FIRST_PARTY:
-                return ContentBlocking.CookieBehavior.ACCEPT_FIRST_PARTY;
-            case com.igalia.wolvic.browser.api.ContentBlocking.CookieBehavior.ACCEPT_NONE:
-                return ContentBlocking.CookieBehavior.ACCEPT_NONE;
-            case com.igalia.wolvic.browser.api.ContentBlocking.CookieBehavior.ACCEPT_NON_TRACKERS:
-                return ContentBlocking.CookieBehavior.ACCEPT_NON_TRACKERS;
-            case com.igalia.wolvic.browser.api.ContentBlocking.CookieBehavior.ACCEPT_VISITED:
-                return ContentBlocking.CookieBehavior.ACCEPT_VISITED;
-        }
-
-        throw new RuntimeException("Unreachable code");
-    }
-
-    private int toGeckoEtpLevel(@com.igalia.wolvic.browser.api.ContentBlocking.CBEtpLevel int flags) {
-        switch (flags) {
-            case com.igalia.wolvic.browser.api.ContentBlocking.EtpLevel.DEFAULT:
-                return ContentBlocking.EtpLevel.DEFAULT;
-            case com.igalia.wolvic.browser.api.ContentBlocking.EtpLevel.NONE:
-                return ContentBlocking.EtpLevel.NONE;
-            case com.igalia.wolvic.browser.api.ContentBlocking.EtpLevel.STRICT:
-                return ContentBlocking.EtpLevel.STRICT;
-        }
-
-        throw new RuntimeException("Unreachable code");
-    }
-
-    private int toGeckoCookieLifetime(@com.igalia.wolvic.browser.api.ContentBlocking.CBCookieLifetime int flags) {
-        switch (flags) {
-            case com.igalia.wolvic.browser.api.ContentBlocking.CookieLifetime.DAYS:
-                return ContentBlocking.CookieLifetime.DAYS;
-            case com.igalia.wolvic.browser.api.ContentBlocking.CookieLifetime.NORMAL:
-                return ContentBlocking.CookieLifetime.NORMAL;
-            case com.igalia.wolvic.browser.api.ContentBlocking.CookieLifetime.RUNTIME:
-                return ContentBlocking.CookieLifetime.RUNTIME;
-        }
-
-        throw new RuntimeException("Unreachable code");
-    }
-
-    private int toGeckoColorScheme(@RuntimeSettings.ColorScheme int flags) {
+    static int toGeckoColorScheme(@RuntimeSettings.ColorScheme int flags) {
         switch (flags) {
             case RuntimeSettings.COLOR_SCHEME_DARK:
                 return GeckoRuntimeSettings.COLOR_SCHEME_DARK;
