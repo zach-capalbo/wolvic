@@ -70,7 +70,6 @@ public class VRBrowserApplication extends Application implements AppServicesProv
 
     protected void onActivityCreate(@NonNull Context activityContext) {
         onConfigurationChanged(activityContext.getResources().getConfiguration());
-        EngineProvider.INSTANCE.getDefaultGeckoWebExecutor(activityContext);
         mAppExecutors = new AppExecutors();
         mConnectivityManager = new ConnectivityReceiver(activityContext);
         mConnectivityManager.init();

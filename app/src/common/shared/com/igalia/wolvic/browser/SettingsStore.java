@@ -22,6 +22,7 @@ import com.igalia.wolvic.BuildConfig;
 import com.igalia.wolvic.R;
 import com.igalia.wolvic.VRBrowserActivity;
 import com.igalia.wolvic.VRBrowserApplication;
+import com.igalia.wolvic.browser.api.ContentBlocking;
 import com.igalia.wolvic.browser.api.ISessionSettings;
 import com.igalia.wolvic.browser.engine.EngineProvider;
 import com.igalia.wolvic.telemetry.TelemetryService;

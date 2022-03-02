@@ -12,9 +12,6 @@ import com.igalia.wolvic.utils.StringUtils;
 import com.meetkai.speechlibrary.ISpeechRecognitionListener;
 import com.meetkai.speechlibrary.MKSpeechService;
 import com.meetkai.speechlibrary.STTResult;
-
-import org.mozilla.geckoview.GeckoWebExecutor;
-
 import com.igalia.wolvic.ui.widgets.dialogs.VoiceSearchWidget;
 import com.igalia.wolvic.utils.SystemUtils;
 
@@ -41,7 +38,7 @@ public class MKSpeechRecognizer implements SpeechRecognizer, ISpeechRecognitionL
     }
 
     @Override
-    public void start(@NonNull Settings settings, @Nullable GeckoWebExecutor executor, @NonNull Callback callback) {
+    public void start(@NonNull Settings settings, @NonNull Callback callback) {
         mkSpeechService = MKSpeechService.getInstance();
         mCallback = callback;
         mkSpeechService.addListener(this);

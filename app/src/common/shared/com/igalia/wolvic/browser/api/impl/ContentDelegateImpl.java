@@ -14,6 +14,7 @@ import org.mozilla.geckoview.WebResponse;
 
 import java.io.InputStream;
 import java.security.cert.X509Certificate;
+import java.util.Map;
 import java.util.Objects;
 
 class ContentDelegateImpl implements GeckoSession.ContentDelegate {
@@ -85,6 +86,18 @@ class ContentDelegateImpl implements GeckoSession.ContentDelegate {
     @Override
     public void onExternalResponse(@NonNull GeckoSession session, @NonNull WebResponse response) {
         mDelegate.onExternalResponse(mSession, new com.igalia.wolvic.browser.api.WebResponse() {
+            @NonNull
+            @Override
+            public String uri() {
+                return response.uri;
+            }
+
+            @NonNull
+            @Override
+            public Map<String, String> headers() {
+                return response.headers;
+            }
+
             @Override
             public int statusCode() {
                 return response.statusCode;

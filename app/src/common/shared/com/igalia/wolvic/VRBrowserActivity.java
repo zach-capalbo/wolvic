@@ -46,6 +46,8 @@ import org.json.JSONObject;
 import com.igalia.wolvic.audio.AudioEngine;
 import com.igalia.wolvic.browser.PermissionDelegate;
 import com.igalia.wolvic.browser.SettingsStore;
+import com.igalia.wolvic.browser.api.IRuntime;
+import com.igalia.wolvic.browser.api.ISession;
 import com.igalia.wolvic.browser.engine.EngineProvider;
 import com.igalia.wolvic.browser.engine.Session;
 import com.igalia.wolvic.browser.engine.SessionStore;
@@ -392,6 +394,10 @@ public class VRBrowserActivity extends PlatformActivity implements WidgetManager
         }
     }
 
+    IRuntime.CrashReportIntent getCrashReportIntent() {
+        return EngineProvider.INSTANCE.getOrCreateRuntime(this).getCrashReportIntent();
+    }
+
     @Override
     protected void onStart() {
         SettingsStore.getInstance(getBaseContext()).setPid(Process.myPid());
@@ -524,7 +530,7 @@ public class VRBrowserActivity extends PlatformActivity implements WidgetManager
         super.onNewIntent(intent);
         setIntent(intent);
 
-        if (GeckoRuntime.ACTION_CRASHED.equals(intent.getAction())) {
+        if (getCrashReportIntent().action_crashed.equals(intent.getAction())) {
             Log.e(LOGTAG, "Restarted after a crash");
         } else {
             loadFromIntent(intent);
@@ -547,7 +553,7 @@ public class VRBrowserActivity extends PlatformActivity implements WidgetManager
     }
 
     void loadFromIntent(final Intent intent) {
-        if (GeckoRuntime.ACTION_CRASHED.equals(intent.getAction())) {
+        if (getCrashReportIntent().action_crashed.equals(intent.getAction())) {
             Log.e(LOGTAG,"Loading from crash Intent");
         }
 
@@ -672,11 +678,11 @@ public class VRBrowserActivity extends PlatformActivity implements WidgetManager
 
     private void handleContentCrashIntent(@NonNull final Intent intent) {
         Log.e(LOGTAG, "Got content crashed intent");
-        final String dumpFile = intent.getStringExtra(GeckoRuntime.EXTRA_MINIDUMP_PATH);
-        final String extraFile = intent.getStringExtra(GeckoRuntime.EXTRA_EXTRAS_PATH);
+        final String dumpFile = intent.getStringExtra(getCrashReportIntent().extra_minidump_path);
+        final String extraFile = intent.getStringExtra(getCrashReportIntent().extra_extras_path);
         Log.d(LOGTAG, "Dump File: " + dumpFile);
         Log.d(LOGTAG, "Extras File: " + extraFile);
-        Log.d(LOGTAG, "Fatal: " + intent.getBooleanExtra(GeckoRuntime.EXTRA_CRASH_FATAL, false));
+        Log.d(LOGTAG, "Fatal: " + intent.getBooleanExtra(getCrashReportIntent().extra_crash_fatal, false));
 
         boolean isCrashReportingEnabled = SettingsStore.getInstance(this).isCrashReportingEnabled();
         if (isCrashReportingEnabled) {
@@ -983,7 +989,7 @@ public class VRBrowserActivity extends PlatformActivity implements WidgetManager
     @Keep
     @SuppressWarnings("unused")
     void registerExternalContext(long aContext) {
-        GeckoVRManager.setExternalContext(aContext);
+        EngineProvider.INSTANCE.getOrCreateRuntime(this).setExternalVRContext(aContext);
     }
 
     final Object mCompositorLock = new Object();
@@ -1503,11 +1509,6 @@ public class VRBrowserActivity extends PlatformActivity implements WidgetManager
     }
 
     @Override
-    public void setIsServoSession(boolean aIsServo) {
-      queueRunnable(() -> setIsServo(aIsServo));
-    }
-
-    @Override
     public void pushWorldBrightness(Object aKey, float aBrightness) {
         if (mCurrentBrightness.second != aBrightness) {
             queueRunnable(() -> setWorldBrightnessNative(aBrightness));
@@ -1586,12 +1587,12 @@ public class VRBrowserActivity extends PlatformActivity implements WidgetManager
     }
 
     @Override
-    public void requestPermission(String uri, @NonNull String permission, GeckoSession.PermissionDelegate.Callback aCallback) {
+    public void requestPermission(String uri, @NonNull String permission, ISession.PermissionDelegate.Callback aCallback) {
         Session session = SessionStore.get().getActiveSession();
         if (uri != null && !uri.isEmpty()) {
-            mPermissionDelegate.onAppPermissionRequest(session.getGeckoSession(), uri, permission, aCallback);
+            mPermissionDelegate.onAppPermissionRequest(session.getISession(), uri, permission, aCallback);
         } else {
-            mPermissionDelegate.onAndroidPermissionsRequest(session.getGeckoSession(), new String[]{permission}, aCallback);
+            mPermissionDelegate.onAndroidPermissionsRequest(session.getISession(), new String[]{permission}, aCallback);
         }
     }
 

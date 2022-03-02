@@ -13,13 +13,12 @@ import com.igalia.wolvic.browser.api.RuntimeSettings
 import com.igalia.wolvic.browser.content.TrackingProtectionPolicy
 import com.igalia.wolvic.browser.content.TrackingProtectionStore
 import com.igalia.wolvic.crashreporting.CrashReporterService
-import org.mozilla.geckoview.GeckoWebExecutor
+import mozilla.components.concept.fetch.Client
 
 object EngineProvider {
 
     private var runtime: IRuntime? = null
-    private var executor: GeckoWebExecutor? = null
-    private var client: GeckoViewFetchClient? = null
+    private var client: Client? = null
 
     @Synchronized
     fun getOrCreateRuntime(context: Context): IRuntime {
@@ -75,27 +74,11 @@ object EngineProvider {
         return runtime != null
     }
 
-    private fun createGeckoWebExecutor(context: Context): GeckoWebExecutor {
-        return GeckoWebExecutor(getOrCreateRuntime(context))
+    fun createClient(context: Context): Client {
+        return runtime!!.createFetchClient(context)
     }
 
-     fun getDefaultGeckoWebExecutor(context: Context): GeckoWebExecutor {
-        if (executor == null) {
-            executor = createGeckoWebExecutor(context)
-            client?.let { it.executor = executor }
-
-        }
-
-        return executor!!
-    }
-
-    fun createClient(context: Context): GeckoViewFetchClient {
-        val client = GeckoViewFetchClient(context)
-        client.executor = executor
-        return client
-    }
-
-    fun getDefaultClient(context: Context): GeckoViewFetchClient {
+    fun getDefaultClient(context: Context): Client {
         if (client == null) {
             client = createClient(context)
         }

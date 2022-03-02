@@ -18,10 +18,10 @@ import android.widget.TextView;
 
 import androidx.databinding.DataBindingUtil;
 
-import org.mozilla.geckoview.GeckoSession;
-import org.mozilla.geckoview.StorageController;
 import com.igalia.wolvic.R;
 import com.igalia.wolvic.browser.SettingsStore;
+import com.igalia.wolvic.browser.api.IRuntime;
+import com.igalia.wolvic.browser.api.ISession;
 import com.igalia.wolvic.browser.engine.SessionStore;
 import com.igalia.wolvic.databinding.OptionsPrivacyBinding;
 import com.igalia.wolvic.ui.views.settings.RadioGroupSetting;
@@ -74,13 +74,13 @@ class PrivacyOptionsView extends SettingsView {
 
         mBinding.clearCookiesSite.setOnClickListener(v -> {
             SessionStore.get().clearCache(
-                    StorageController.ClearFlags.SITE_DATA |
-                            StorageController.ClearFlags.COOKIES |
-                            StorageController.ClearFlags.SITE_SETTINGS);
+                    IRuntime.ClearFlags.SITE_DATA |
+                            IRuntime.ClearFlags.COOKIES |
+                            IRuntime.ClearFlags.SITE_SETTINGS);
         });
 
         mBinding.clearWebContent.setOnClickListener(v -> {
-            SessionStore.get().clearCache(StorageController.ClearFlags.ALL_CACHES);
+            SessionStore.get().clearCache(IRuntime.ClearFlags.ALL_CACHES);
         });
 
         TextView permissionsTitleText = findViewById(R.id.permissionsTitle);
@@ -163,7 +163,7 @@ class PrivacyOptionsView extends SettingsView {
             aButton.setChecked(true);
 
         } else {
-            mWidgetManager.requestPermission("", aPermission, new GeckoSession.PermissionDelegate.Callback() {
+            mWidgetManager.requestPermission("", aPermission, new ISession.PermissionDelegate.Callback() {
                 @Override
                 public void grant() {
                     aButton.setChecked(true);
@@ -365,7 +365,7 @@ class PrivacyOptionsView extends SettingsView {
         if (doApply) {
             SettingsStore.getInstance(getContext()).setWebXREnabled(value);
             for (WindowWidget window: mWidgetManager.getWindows().getCurrentWindows()) {
-                window.getSession().reload(GeckoSession.LOAD_FLAGS_BYPASS_CACHE);
+                window.getSession().reload(ISession.LOAD_FLAGS_BYPASS_CACHE);
             }
         }
     }

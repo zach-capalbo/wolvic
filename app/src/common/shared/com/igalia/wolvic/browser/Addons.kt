@@ -94,9 +94,9 @@ class Addons(val context: Context, private val sessionStore: SessionStore) {
                     false,
                     onNewTabOverride = {
                         _, engineSession, url ->
-                        val session = sessionStore.getSession((engineSession as WolvicEngineSession).geckoSession)
-                        session?.loadUri(url, GeckoSession.LOAD_FLAGS_REPLACE_HISTORY)
-                        session!!.id
+                        val session = (engineSession as WolvicEngineSession).session
+                        session.loadUri(url, GeckoSession.LOAD_FLAGS_REPLACE_HISTORY)
+                        session.id
                     },
                     onCloseTabOverride = {
                         _, sessionId ->

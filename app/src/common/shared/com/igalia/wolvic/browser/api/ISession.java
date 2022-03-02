@@ -2,6 +2,7 @@ package com.igalia.wolvic.browser.api;
 
 import android.annotation.TargetApi;
 import android.content.Context;
+import android.graphics.Matrix;
 import android.graphics.RectF;
 import android.net.Uri;
 import android.os.Build;
@@ -18,12 +19,9 @@ import androidx.annotation.Nullable;
 import androidx.annotation.StringDef;
 import androidx.annotation.UiThread;
 
-import com.igalia.wolvic.browser.api.impl.PromptDelegateImpl;
 import com.igalia.wolvic.browser.api.impl.SessionImpl;
 
 import org.json.JSONObject;
-import org.mozilla.geckoview.SessionTextInput;
-
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.security.cert.X509Certificate;
@@ -2596,6 +2594,52 @@ public interface ISession {
     @AnyThread
     void restoreState(final @NonNull ISessionState state);
 
+    /**
+     * Get a matrix for transforming from client coordinates to surface coordinates.
+     *
+     * @param matrix Matrix to be replaced by the transformation matrix.
+     * @see #getClientToScreenMatrix(Matrix)
+     * @see #getPageToSurfaceMatrix(Matrix)
+     */
+    @UiThread
+    void getClientToSurfaceMatrix(@NonNull final Matrix matrix);
+
+
+    /**
+     * Get a matrix for transforming from client coordinates to screen coordinates. The client
+     * coordinates are in CSS pixels and are relative to the viewport origin; their relation to screen
+     * coordinates does not depend on the current scroll position.
+     *
+     * @param matrix Matrix to be replaced by the transformation matrix.
+     * @see #getClientToSurfaceMatrix(Matrix)
+     * @see #getPageToScreenMatrix(Matrix)
+     */
+    @UiThread
+    void getClientToScreenMatrix(@NonNull final Matrix matrix);
+
+
+
+    /**
+     * Get a matrix for transforming from page coordinates to screen coordinates. The page coordinates
+     * are in CSS pixels and are relative to the page origin; their relation to screen coordinates
+     * depends on the current scroll position of the outermost frame.
+     *
+     * @param matrix Matrix to be replaced by the transformation matrix.
+     * @see #getPageToSurfaceMatrix(Matrix)
+     * @see #getClientToScreenMatrix(Matrix)
+     */
+    @UiThread
+    void getPageToScreenMatrix(@NonNull final Matrix matrix);
+
+    /**
+     * Get a matrix for transforming from page coordinates to surface coordinates.
+     *
+     * @param matrix Matrix to be replaced by the transformation matrix.
+     * @see #getPageToScreenMatrix(Matrix)
+     * @see #getClientToSurfaceMatrix(Matrix)
+     */
+    @UiThread
+    void getPageToSurfaceMatrix(@NonNull final Matrix matrix);
 
     /**
      * Get the SessionTextInput instance for this session. May be called on any thread.
@@ -2605,6 +2649,16 @@ public interface ISession {
     @AnyThread
     @NonNull
     ITextInput getTextInput();
+
+
+    /**
+     * Get the PanZoomController instance for this session.
+     *
+     * @return PanZoomController instance.
+     */
+    @UiThread
+    @NonNull
+    PanZoomController getPanZoomController();
 
 
     /**

@@ -39,7 +39,6 @@ import com.igalia.wolvic.browser.api.ISessionState;
 import com.igalia.wolvic.browser.api.SlowScriptResponse;
 import com.igalia.wolvic.browser.api.WebRequestError;
 import com.igalia.wolvic.browser.api.WebResponse;
-import com.igalia.wolvic.browser.api.impl.PromptDelegateImpl;
 import com.igalia.wolvic.browser.content.TrackingProtectionPolicy;
 import com.igalia.wolvic.browser.content.TrackingProtectionStore;
 import com.igalia.wolvic.geolocation.GeolocationData;
@@ -1533,7 +1532,7 @@ public class Session implements ContentBlocking.Delegate, ISession.NavigationDel
 
     @Nullable
     @Override
-    public IResult<PromptResponse> onLoginSave(@NonNull ISession ISession, @NonNull PromptDelegateImpl.AutoCompletePromptImpl<org.mozilla.geckoview.Autocomplete.LoginSaveOption> autocompleteRequest) {
+    public IResult<PromptResponse> onLoginSave(@NonNull ISession ISession, @NonNull AutocompleteRequest<Autocomplete.LoginSaveOption> autocompleteRequest) {
         if (mPromptDelegate != null) {
             return mPromptDelegate.onLoginSave(ISession, autocompleteRequest);
         }

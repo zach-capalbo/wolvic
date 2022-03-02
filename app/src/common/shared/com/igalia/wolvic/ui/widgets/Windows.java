@@ -12,7 +12,6 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 
 import org.jetbrains.annotations.NotNull;
-import org.mozilla.geckoview.GeckoSession;
 import com.igalia.wolvic.R;
 import com.igalia.wolvic.VRBrowserApplication;
 import com.igalia.wolvic.browser.Accounts;
@@ -21,6 +20,7 @@ import com.igalia.wolvic.browser.Media;
 import com.igalia.wolvic.browser.Services;
 import com.igalia.wolvic.browser.SettingsStore;
 import com.igalia.wolvic.browser.adapter.ComponentsAdapter;
+import com.igalia.wolvic.browser.api.ISession;
 import com.igalia.wolvic.browser.components.WolvicEngineSession;
 import com.igalia.wolvic.browser.engine.Session;
 import com.igalia.wolvic.browser.engine.SessionState;
@@ -833,7 +833,7 @@ public class Windows implements TrayListener, TopBarWidget.Delegate, TitleBarWid
     }
 
     private void setWindowVisible(@NonNull WindowWidget aWindow, boolean aVisible) {
-        if (aVisible && (aWindow.getSession() != null) && (aWindow.getSession().getGeckoSession() == null)) {
+        if (aVisible && (aWindow.getSession() != null) && (aWindow.getSession().getISession() == null)) {
             setFirstPaint(aWindow, aWindow.getSession());
         }
         aWindow.setVisible(aVisible);
@@ -1120,13 +1120,13 @@ public class Windows implements TrayListener, TopBarWidget.Delegate, TitleBarWid
     }
 
     private void setFirstPaint(@NonNull final WindowWidget aWindow, @NonNull final Session aSession) {
-        if (aSession.getGeckoSession() == null) {
+        if (aSession.getISession() == null) {
             aWindow.waitForFirstPaint();
         } else {
             // If the new session has a GeckoSession there won't be a first paint event.
             // So trigger the first paint callback in case the window is grayed out
             // waiting for the first paint event.
-            aWindow.onFirstContentfulPaint(aSession.getGeckoSession());
+            aWindow.onFirstContentfulPaint(aSession.getISession());
         }
     }
 
@@ -1209,9 +1209,9 @@ public class Windows implements TrayListener, TopBarWidget.Delegate, TitleBarWid
     }
 
     @Nullable
-    private WindowWidget getWindowWithSession(GeckoSession aSession) {
+    private WindowWidget getWindowWithSession(ISession aSession) {
         for (WindowWidget window: getCurrentWindows()) {
-            if (window.getSession().getGeckoSession() == aSession) {
+            if (window.getSession().getISession() == aSession) {
                 return window;
             }
         }

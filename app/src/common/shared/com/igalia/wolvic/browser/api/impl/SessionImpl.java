@@ -1,5 +1,7 @@
 package com.igalia.wolvic.browser.api.impl;
 
+import android.graphics.Matrix;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
@@ -11,6 +13,8 @@ import com.igalia.wolvic.browser.api.ISessionSettings;
 import com.igalia.wolvic.browser.api.ISessionState;
 import com.igalia.wolvic.browser.api.ITextInput;
 import com.igalia.wolvic.browser.api.MediaSession;
+import com.igalia.wolvic.browser.api.PanZoomController;
+
 import org.mozilla.geckoview.GeckoSession;
 
 public class SessionImpl implements ISession {
@@ -23,9 +27,11 @@ public class SessionImpl implements ISession {
     private ISession.NavigationDelegate mNavigationDelegate;
     private ISession.ScrollDelegate mScrollDelegate;
     private ISession.HistoryDelegate mHistoryDelegate;
+    private ISession.PromptDelegate mPromptDelegate;
     private ContentBlocking.Delegate mContentBlockingDelegate;
     private MediaSession.Delegate mMediaSessionDelegate;
     private TextInputImpl mTextInput;
+    private PanZoomControllerImpl mPanZoomController;
 
     public SessionImpl(@Nullable ISessionSettings settings) {
         if (settings == null) {
@@ -35,6 +41,7 @@ public class SessionImpl implements ISession {
         }
         mSettings = new SettingsImpl(mSession.getSettings());
         mTextInput = new TextInputImpl(this);
+        mPanZoomController = new PanZoomControllerImpl(mSession);
     }
 
     public @NonNull GeckoSession getGeckoSession() {
@@ -136,10 +143,36 @@ public class SessionImpl implements ISession {
         mSession.restoreState(((SessionStateImpl)state).getGeckoState());
     }
 
+    @Override
+    public void getClientToSurfaceMatrix(@NonNull Matrix matrix) {
+        mSession.getClientToSurfaceMatrix(matrix);
+    }
+
+    @Override
+    public void getClientToScreenMatrix(@NonNull Matrix matrix) {
+        mSession.getClientToScreenMatrix(matrix);
+    }
+
+    @Override
+    public void getPageToScreenMatrix(@NonNull Matrix matrix) {
+        mSession.getPageToScreenMatrix(matrix);
+    }
+
+    @Override
+    public void getPageToSurfaceMatrix(@NonNull Matrix matrix) {
+        mSession.getPageToSurfaceMatrix(matrix);
+    }
+
     @NonNull
     @Override
     public ITextInput getTextInput() {
         return mTextInput;
+    }
+
+    @NonNull
+    @Override
+    public PanZoomController getPanZoomController() {
+        return mPanZoomController;
     }
 
     @Override
@@ -277,13 +310,21 @@ public class SessionImpl implements ISession {
 
     @Override
     public void setPromptDelegate(@Nullable PromptDelegate delegate) {
-
+        if (mPromptDelegate == delegate) {
+            return;
+        }
+        mPromptDelegate = delegate;
+        if (mPromptDelegate == null) {
+            mSession.setPromptDelegate(null);
+        } else {
+            mSession.setPromptDelegate(new PromptDelegateImpl(mPromptDelegate, this));
+        }
     }
 
     @Nullable
     @Override
     public PromptDelegate getPromptDelegate() {
-        return null;
+        return mPromptDelegate;
     }
 
     @Override

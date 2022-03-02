@@ -1,8 +1,10 @@
 package com.igalia.wolvic.browser.api.impl;
 
 import android.content.Context;
+import android.content.res.Configuration;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.igalia.wolvic.browser.api.IResult;
 import com.igalia.wolvic.browser.api.IRuntime;
@@ -12,25 +14,34 @@ import com.igalia.wolvic.browser.api.WebExtensionController;
 import org.mozilla.geckoview.ContentBlocking;
 import org.mozilla.geckoview.GeckoRuntime;
 import org.mozilla.geckoview.GeckoRuntimeSettings;
+import org.mozilla.geckoview.GeckoVRManager;
+import org.mozilla.geckoview.GeckoWebExecutor;
 import org.mozilla.geckoview.StorageController;
 
+import kotlin.Lazy;
+import mozilla.components.concept.fetch.Client;
+import mozilla.components.concept.storage.LoginsStorage;
+
 public class RuntimeImpl implements IRuntime {
+    private Context mContext;
     private GeckoRuntime mRuntime;
-    private RuntimeSettings mSettings;
+    private RuntimeSettingsImpl mSettings;
     private WebExtensionControllerImpl mWebExtensionController;
+    private GeckoWebExecutor mExecutor;
 
     public RuntimeImpl(Context ctx, RuntimeSettings settings) {
+        mContext = ctx;
         GeckoRuntimeSettings.Builder builder = new GeckoRuntimeSettings.Builder();
         builder.crashHandler(settings.getCrashHandler())
                 .aboutConfigEnabled(settings.isAboutConfigEnabled())
                 .allowInsecureConnections((int)settings.getAllowInsecureConenctions())
                 .contentBlocking(new ContentBlocking.Settings.Builder()
-                        .antiTracking(toGeckoAntitracking(settings.getContentBlocking().getAntiTracking()))
-                        .enhancedTrackingProtectionLevel(toGeckoEtpLevel(settings.getContentBlocking().getEnhancedTrackingProtectionLevel()))
-                        .cookieBehavior(toGeckoCookieBehavior(settings.getContentBlocking().getCookieBehavior()))
-                        .cookieBehaviorPrivateMode(toGeckoCookieBehavior(settings.getContentBlocking().getCookieBehaviorPrivate()))
-                        .cookieLifetime(toGeckoCookieLifetime(settings.getContentBlocking().getCookieLifetime()))
-                        .safeBrowsing(toGeckoSafeBrowsing(settings.getContentBlocking().getSafeBrowsing()))
+                        .antiTracking(ContentBlockingDelegateImpl.toGeckoAntitracking(settings.getContentBlocking().getAntiTracking()))
+                        .enhancedTrackingProtectionLevel(ContentBlockingDelegateImpl.toGeckoEtpLevel(settings.getContentBlocking().getEnhancedTrackingProtectionLevel()))
+                        .cookieBehavior(ContentBlockingDelegateImpl.toGeckoCookieBehavior(settings.getContentBlocking().getCookieBehavior()))
+                        .cookieBehaviorPrivateMode(ContentBlockingDelegateImpl.toGeckoCookieBehavior(settings.getContentBlocking().getCookieBehaviorPrivate()))
+                        .cookieLifetime(ContentBlockingDelegateImpl.toGeckoCookieLifetime(settings.getContentBlocking().getCookieLifetime()))
+                        .safeBrowsing(ContentBlockingDelegateImpl.toGeckoSafeBrowsing(settings.getContentBlocking().getSafeBrowsing()))
                         .build())
                 .displayDensityOverride(settings.getDisplayDensityOverride())
                 .remoteDebuggingEnabled(settings.isRemoteDebugging())
@@ -49,8 +60,9 @@ public class RuntimeImpl implements IRuntime {
                 .preferredColorScheme(toGeckoColorScheme(settings.getPreferredColorScheme()));
 
         mRuntime = GeckoRuntime.create(ctx, builder.build());
-        mSettings = settings;
+        mSettings = new RuntimeSettingsImpl(mRuntime);
         mWebExtensionController = new WebExtensionControllerImpl(mRuntime);
+        mExecutor = new GeckoWebExecutor(mRuntime);
     }
 
     GeckoRuntime getGeckoRuntime() {
@@ -84,6 +96,39 @@ public class RuntimeImpl implements IRuntime {
     @Override
     public WebExtensionController getWebExtensionController() {
         return mWebExtensionController;
+    }
+
+    @NonNull
+    @Override
+    public void seUptLoginPersistence(Lazy<LoginsStorage> storage) {
+        mRuntime.setAutocompleteStorageDelegate(GeckoAutocompleteDelegateWrapper.create(storage));
+    }
+
+    @NonNull
+    @Override
+    public Client createFetchClient(Context context) {
+        return GeckoViewFetchClient.create(context, mExecutor);
+    }
+
+    @Override
+    public void setExternalVRContext(long aContext) {
+        GeckoVRManager.setExternalContext(aContext);
+    }
+
+    @Override
+    public void configurationChanged(@NonNull Configuration newConfig) {
+        mRuntime.configurationChanged(newConfig);
+    }
+
+    @Override
+    public void appendAppNotesToCrashReport(@NonNull String notes) {
+        mRuntime.appendAppNotesToCrashReport(notes);
+    }
+
+    @NonNull
+    @Override
+    public CrashReportIntent getCrashReportIntent() {
+        return new CrashReportIntent(GeckoRuntime.ACTION_CRASHED, GeckoRuntime.EXTRA_MINIDUMP_PATH, GeckoRuntime.EXTRA_EXTRAS_PATH, GeckoRuntime.EXTRA_CRASH_FATAL);
     }
 
     static int toGeckoColorScheme(@RuntimeSettings.ColorScheme int flags) {

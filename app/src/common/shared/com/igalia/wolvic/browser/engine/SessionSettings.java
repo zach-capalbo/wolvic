@@ -16,7 +16,6 @@ class SessionSettings {
     private boolean isSuspendMediaWhenInactiveEnabled;
     private int userAgentMode;
     private int viewportMode;
-    private boolean isServoEnabled;
     private String userAgentOverride;
 
     /* package */ SessionSettings(@NonNull Builder builder) {
@@ -25,7 +24,6 @@ class SessionSettings {
         this.isSuspendMediaWhenInactiveEnabled = builder.isSuspendMediaWhenInactiveEnabled;
         this.userAgentMode = builder.userAgentMode;
         this.viewportMode = builder.viewportMode;
-        this.isServoEnabled = builder.isServoEnabled;
         this.userAgentOverride = builder.userAgentOverride;
     }
 

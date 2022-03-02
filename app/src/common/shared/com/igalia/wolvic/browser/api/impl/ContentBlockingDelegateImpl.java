@@ -134,7 +134,7 @@ class ContentBlockingDelegateImpl implements ContentBlocking.Delegate {
                 return com.igalia.wolvic.browser.api.ContentBlocking.CookieBehavior.ACCEPT_ALL;
             case ContentBlocking.CookieBehavior.ACCEPT_FIRST_PARTY:
                 return com.igalia.wolvic.browser.api.ContentBlocking.CookieBehavior.ACCEPT_FIRST_PARTY;
-            case .ContentBlocking.CookieBehavior.ACCEPT_NONE:
+            case ContentBlocking.CookieBehavior.ACCEPT_NONE:
                 return com.igalia.wolvic.browser.api.ContentBlocking.CookieBehavior.ACCEPT_NONE;
             case ContentBlocking.CookieBehavior.ACCEPT_NON_TRACKERS:
                 return com.igalia.wolvic.browser.api.ContentBlocking.CookieBehavior.ACCEPT_NON_TRACKERS;

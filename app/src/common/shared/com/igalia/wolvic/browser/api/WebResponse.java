@@ -1,14 +1,22 @@
 package com.igalia.wolvic.browser.api;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import java.io.InputStream;
 import java.security.cert.X509Certificate;
+import java.util.Map;
 
 public interface WebResponse {
 
     /** The default read timeout for the {@link #body} stream. */
-     long DEFAULT_READ_TIMEOUT_MS = 30000;
+    long DEFAULT_READ_TIMEOUT_MS = 30000;
+
+    /** The URI for the request or response. */
+    @NonNull String uri();
+
+    /** An unmodifiable Map of headers. Defaults to an empty instance. */
+    @NonNull Map<String, String> headers();
 
     /** The HTTP status code for the response, e.g. 200. */
     int statusCode();

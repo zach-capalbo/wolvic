@@ -1,7 +1,9 @@
 package com.igalia.wolvic.browser.api;
 
 import android.content.Context;
+import android.content.res.Configuration;
 
+import androidx.annotation.AnyThread;
 import androidx.annotation.LongDef;
 import androidx.annotation.NonNull;
 import androidx.annotation.UiThread;
@@ -10,6 +12,10 @@ import com.igalia.wolvic.browser.api.impl.RuntimeImpl;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
+
+import kotlin.Lazy;
+import mozilla.components.concept.fetch.Client;
+import mozilla.components.concept.storage.LoginsStorage;
 
 public interface IRuntime {
 
@@ -112,5 +118,63 @@ public interface IRuntime {
     @UiThread
     @NonNull
     WebExtensionController getWebExtensionController();
+
+    /**
+     *  Set up the persistence and retrieval of LoginEntrys.
+     *
+     */
+    @UiThread
+    @NonNull
+    void seUptLoginPersistence(Lazy<LoginsStorage> storage);
+
+    /**
+     * Creates a Client for fetching resources via HTTP/s.
+     */
+    @UiThread
+    @NonNull
+    Client createFetchClient(Context context);
+
+    /**
+     * Sets the External VR shared memory data context.
+     * User for WebXR synchronization between the Application and the browser engine.
+     * Params:
+     * externalContext – A pointer to the external VR context.
+     */
+    void setExternalVRContext(long externalContext);
+
+
+    /**
+     * Notify that the device configuration has changed.
+     *
+     * @param newConfig The new Configuration object, {@link android.content.res.Configuration}.
+     */
+    @UiThread
+    void configurationChanged(final @NonNull Configuration newConfig);
+
+
+    /**
+     * Appends notes to crash report.
+     *
+     * @param notes The application notes to append to the crash report.
+     */
+    @AnyThread
+    void appendAppNotesToCrashReport(@NonNull final String notes);
+
+
+    @NonNull CrashReportIntent getCrashReportIntent();
+
+    class CrashReportIntent {
+        final public String action_crashed;
+        final public String extra_minidump_path;
+        final public String extra_extras_path;
+        final public String extra_crash_fatal;
+
+        public CrashReportIntent(String action_crashed, String extra_minidump_path, String extra_extras_path, String extra_crash_fatal) {
+            this.action_crashed = action_crashed;
+            this.extra_minidump_path = extra_minidump_path;
+            this.extra_extras_path = extra_extras_path;
+            this.extra_crash_fatal = extra_crash_fatal;
+        }
+    }
 
 }

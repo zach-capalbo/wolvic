@@ -241,9 +241,7 @@ public class VoiceSearchWidget extends UIDialog implements WidgetManagerDelegate
             settings.storeData = storeData;
             settings.productTag = getContext().getString(R.string.voice_app_id);
 
-            mSpeechRecognizer.start(settings,
-                    EngineProvider.INSTANCE.getDefaultGeckoWebExecutor(getContext()),
-                    mResultCallback);
+            mSpeechRecognizer.start(settings, mResultCallback);
         }
     }
 

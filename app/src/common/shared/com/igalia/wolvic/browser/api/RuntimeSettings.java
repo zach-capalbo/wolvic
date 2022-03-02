@@ -8,9 +8,11 @@ import androidx.annotation.AnyThread;
 import androidx.annotation.IntDef;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+
+import org.mozilla.geckoview.GeckoRuntimeSettings;
+
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
-
 
 public class RuntimeSettings {
     /** A light theme for web content is preferred. */
@@ -522,20 +524,8 @@ public class RuntimeSettings {
         return mGlMsaaLevel;
     }
 
-    public boolean isTelemetryEnabled() {
-        return mTelemetryEnabled;
-    }
-
-    public String getLogLevel() {
-        return mLogLevel;
-    }
-
     public boolean isConsoleServiceToLogcat() {
         return mConsoleServiceToLogcat;
-    }
-
-    public boolean isDevToolsConsoleToLogcat() {
-        return mDevToolsConsoleToLogcat;
     }
 
     public boolean isAboutConfigEnabled() {
@@ -594,6 +584,54 @@ public class RuntimeSettings {
         return mContentBlocking;
     }
 
+    /**
+     * Set whether or not web console messages should go to logcat.
+     *
+     * <p>Note: If enabled, performance may be negatively impacted if content makes heavy use of
+     * the console API.
+     *
+     * @param enabled A flag determining whether or not web console messages should be printed to
+     *     logcat.
+     * @return This GeckoRuntimeSettings instance.
+     */
+    public void setConsoleOutputEnabled(final boolean enabled) {
+        mConsoleOutput = enabled;
+    };
+
+
+    /**
+     * Set whether remote debugging support should be enabled.
+     *
+     * @param enabled True if remote debugging should be enabled.
+     * @return This GeckoRuntimeSettings instance.
+     */
+    public void setRemoteDebuggingEnabled(final boolean enabled) {
+        mRemoteDebugging = enabled;
+    };
+
+
+    /**
+     * Set the locale.
+     *
+     * @param requestedLocales An ordered list of locales in format ("en-US").
+     */
+    public void setLocales(final @Nullable String[] requestedLocales) {
+        mRequestedLocales = requestedLocales;
+    };
+
+
+    /**
+     * Set whether login forms should be filled automatically if only one viable candidate is provided
+     * via {@link org.mozilla.geckoview.Autocomplete.StorageDelegate#onLoginFetch onLoginFetch}.
+     *
+     * @param enabled A flag determining whether login autofill should be enabled.
+     * @return The builder instance.
+     */
+    public void setLoginAutofillEnabled(final boolean enabled) {
+        mAutofillLogins = enabled;
+    }
+
+
     String[] mArgs;
     Bundle mExtras;
     String mConfigFilePath;
@@ -608,7 +646,6 @@ public class RuntimeSettings {
     boolean mInputAutoZoom = true;
     boolean mDoubleTapZooming = true;
     int mGlMsaaLevel = 0;
-    boolean mTelemetryEnabled = false;
     String mLogLevel = "Debug";
     boolean mConsoleServiceToLogcat = true;
     boolean mDevToolsConsoleToLogcat = true;

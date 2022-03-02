@@ -169,6 +169,34 @@ class PromptDelegateImpl implements GeckoSession.PromptDelegate {
         }
     }
 
+    private static abstract class AddressSaveImpl extends BasePromptImpl<AutocompleteRequest<Autocomplete.AddressSaveOption>>
+            implements ISession.PromptDelegate.AutocompleteRequest<com.igalia.wolvic.browser.api.Autocomplete.AddressSaveOption> {
+        public AddressSaveImpl(AutocompleteRequest<Autocomplete.AddressSaveOption> geckoPrompt) {
+            super(geckoPrompt);
+        }
+    }
+
+    private static abstract class AddressSelectImpl extends BasePromptImpl<AutocompleteRequest<Autocomplete.AddressSelectOption>>
+            implements ISession.PromptDelegate.AutocompleteRequest<com.igalia.wolvic.browser.api.Autocomplete.AddressSelectOption> {
+        public AddressSelectImpl(AutocompleteRequest<Autocomplete.AddressSelectOption> geckoPrompt) {
+            super(geckoPrompt);
+        }
+    }
+
+    private static abstract class CreditCardSaveImpl extends BasePromptImpl<AutocompleteRequest<Autocomplete.CreditCardSaveOption>>
+            implements ISession.PromptDelegate.AutocompleteRequest<com.igalia.wolvic.browser.api.Autocomplete.CreditCardSaveOption> {
+        public CreditCardSaveImpl(AutocompleteRequest<Autocomplete.CreditCardSaveOption> geckoPrompt) {
+            super(geckoPrompt);
+        }
+    }
+
+    private static abstract class CreditCardSelectImpl extends BasePromptImpl<AutocompleteRequest<Autocomplete.CreditCardSelectOption>>
+            implements ISession.PromptDelegate.AutocompleteRequest<com.igalia.wolvic.browser.api.Autocomplete.CreditCardSelectOption> {
+        public CreditCardSelectImpl(AutocompleteRequest<Autocomplete.CreditCardSelectOption> geckoPrompt) {
+            super(geckoPrompt);
+        }
+    }
+
 
     @Nullable
     @Override
@@ -605,13 +633,45 @@ class PromptDelegateImpl implements GeckoSession.PromptDelegate {
     @Nullable
     @Override
     public GeckoResult<PromptResponse> onAddressSave(@NonNull GeckoSession session, @NonNull AutocompleteRequest<Autocomplete.AddressSaveOption> request) {
-        return GeckoSession.PromptDelegate.super.onAddressSave(session, request);
+        return map(mDelegate.onAddressSave(mSession, new AddressSaveImpl(request) {
+            @NonNull
+            @Override
+            public com.igalia.wolvic.browser.api.Autocomplete.AddressSaveOption[] options() {
+                return Arrays.stream(request.options)
+                        .map(opt -> new com.igalia.wolvic.browser.api.Autocomplete.AddressSaveOption(fromGecko(opt.value)))
+                        .toArray(com.igalia.wolvic.browser.api.Autocomplete.AddressSaveOption[]::new);
+            }
+
+            @NonNull
+            @Override
+            public ISession.PromptDelegate.PromptResponse confirm(@NonNull com.igalia.wolvic.browser.api.Autocomplete.Option<?> selection) {
+                return new PromptResponseImpl(mGeckoPrompt.confirm(
+                        new Autocomplete.AddressSaveOption(toGecko((com.igalia.wolvic.browser.api.Autocomplete.Address) selection.value)))
+                );
+            }
+        }));
     }
 
     @Nullable
     @Override
     public GeckoResult<PromptResponse> onCreditCardSave(@NonNull GeckoSession session, @NonNull AutocompleteRequest<Autocomplete.CreditCardSaveOption> request) {
-        return GeckoSession.PromptDelegate.super.onCreditCardSave(session, request);
+        return map(mDelegate.onCreditCardSave(mSession, new CreditCardSaveImpl(request) {
+            @NonNull
+            @Override
+            public com.igalia.wolvic.browser.api.Autocomplete.CreditCardSaveOption[] options() {
+                return Arrays.stream(request.options)
+                        .map(opt -> new com.igalia.wolvic.browser.api.Autocomplete.CreditCardSaveOption(fromGecko(opt.value)))
+                        .toArray(com.igalia.wolvic.browser.api.Autocomplete.CreditCardSaveOption[]::new);
+            }
+
+            @NonNull
+            @Override
+            public ISession.PromptDelegate.PromptResponse confirm(@NonNull com.igalia.wolvic.browser.api.Autocomplete.Option<?> selection) {
+                return new PromptResponseImpl(mGeckoPrompt.confirm(
+                        new Autocomplete.CreditCardSaveOption(toGecko((com.igalia.wolvic.browser.api.Autocomplete.CreditCard) selection.value)))
+                );
+            }
+        }));
     }
 
     @Nullable
@@ -639,13 +699,45 @@ class PromptDelegateImpl implements GeckoSession.PromptDelegate {
     @Nullable
     @Override
     public GeckoResult<PromptResponse> onCreditCardSelect(@NonNull GeckoSession session, @NonNull AutocompleteRequest<Autocomplete.CreditCardSelectOption> request) {
-        return GeckoSession.PromptDelegate.super.onCreditCardSelect(session, request);
+        return map(mDelegate.onCreditCardSelect(mSession, new CreditCardSelectImpl(request) {
+            @NonNull
+            @Override
+            public com.igalia.wolvic.browser.api.Autocomplete.CreditCardSelectOption[] options() {
+                return Arrays.stream(request.options)
+                        .map(opt -> new com.igalia.wolvic.browser.api.Autocomplete.CreditCardSelectOption(fromGecko(opt.value)))
+                        .toArray(com.igalia.wolvic.browser.api.Autocomplete.CreditCardSelectOption[]::new);
+            }
+
+            @NonNull
+            @Override
+            public ISession.PromptDelegate.PromptResponse confirm(@NonNull com.igalia.wolvic.browser.api.Autocomplete.Option<?> selection) {
+                return new PromptResponseImpl(mGeckoPrompt.confirm(
+                        new Autocomplete.CreditCardSelectOption(toGecko((com.igalia.wolvic.browser.api.Autocomplete.CreditCard) selection.value)))
+                );
+            }
+        }));
     }
 
     @Nullable
     @Override
     public GeckoResult<PromptResponse> onAddressSelect(@NonNull GeckoSession session, @NonNull AutocompleteRequest<Autocomplete.AddressSelectOption> request) {
-        return GeckoSession.PromptDelegate.super.onAddressSelect(session, request);
+        return map(mDelegate.onAddressSelect(mSession, new AddressSelectImpl(request) {
+            @NonNull
+            @Override
+            public com.igalia.wolvic.browser.api.Autocomplete.AddressSelectOption[] options() {
+                return Arrays.stream(request.options)
+                        .map(opt -> new com.igalia.wolvic.browser.api.Autocomplete.AddressSelectOption(fromGecko(opt.value)))
+                        .toArray(com.igalia.wolvic.browser.api.Autocomplete.AddressSelectOption[]::new);
+            }
+
+            @NonNull
+            @Override
+            public ISession.PromptDelegate.PromptResponse confirm(@NonNull com.igalia.wolvic.browser.api.Autocomplete.Option<?> selection) {
+                return new PromptResponseImpl(mGeckoPrompt.confirm(
+                        new Autocomplete.AddressSelectOption(toGecko((com.igalia.wolvic.browser.api.Autocomplete.Address) selection.value)))
+                );
+            }
+        }));
     }
 
     private GeckoResult<PromptResponse> map(IResult<ISession.PromptDelegate.PromptResponse> result) {
@@ -688,6 +780,64 @@ class PromptDelegateImpl implements GeckoSession.PromptDelegate {
                 .origin(entry.origin)
                 .password(entry.password)
                 .username(entry.username)
+                .build();
+    }
+
+    private @NonNull Autocomplete.Address toGecko(@NonNull com.igalia.wolvic.browser.api.Autocomplete.Address address) {
+        return new Autocomplete.Address.Builder()
+                .guid(address.guid)
+                .additionalName(address.additionalName)
+                .addressLevel1(address.addressLevel1)
+                .addressLevel2(address.addressLevel2)
+                .addressLevel3(address.addressLevel3)
+                .country(address.country)
+                .email(address.email)
+                .familyName(address.familyName)
+                .name(address.name)
+                .givenName(address.givenName)
+                .organization(address.organization)
+                .postalCode(address.postalCode)
+                .streetAddress(address.streetAddress)
+                .tel(address.tel)
+                .build();
+    }
+
+    private @NonNull com.igalia.wolvic.browser.api.Autocomplete.Address  fromGecko(@NonNull Autocomplete.Address address) {
+        return new com.igalia.wolvic.browser.api.Autocomplete.Address.Builder()
+                .guid(address.guid)
+                .additionalName(address.additionalName)
+                .addressLevel1(address.addressLevel1)
+                .addressLevel2(address.addressLevel2)
+                .addressLevel3(address.addressLevel3)
+                .country(address.country)
+                .email(address.email)
+                .familyName(address.familyName)
+                .name(address.name)
+                .givenName(address.givenName)
+                .organization(address.organization)
+                .postalCode(address.postalCode)
+                .streetAddress(address.streetAddress)
+                .tel(address.tel)
+                .build();
+    }
+
+    private @NonNull Autocomplete.CreditCard toGecko(@NonNull com.igalia.wolvic.browser.api.Autocomplete.CreditCard card) {
+        return new Autocomplete.CreditCard.Builder()
+                .guid(card.guid)
+                .expirationMonth(card.expirationMonth)
+                .expirationYear(card.expirationYear)
+                .name(card.name)
+                .number(card.number)
+                .build();
+    }
+
+    private @NonNull com.igalia.wolvic.browser.api.Autocomplete.CreditCard fromGecko(@NonNull Autocomplete.CreditCard card) {
+        return new com.igalia.wolvic.browser.api.Autocomplete.CreditCard.Builder()
+                .guid(card.guid)
+                .expirationMonth(card.expirationMonth)
+                .expirationYear(card.expirationYear)
+                .name(card.name)
+                .number(card.number)
                 .build();
     }
 }
