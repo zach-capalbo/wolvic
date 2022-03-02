@@ -318,7 +318,7 @@ public class PromptDelegate implements
 
                     @Override
                     public void confirm(@NonNull Login login) {
-                        result.complete(autocompleteRequest.confirm(new Autocomplete.LoginSelectOption(GeckoAutocompleteDelegateWrapper.toLoginEntry(login))));
+                        result.complete(autocompleteRequest.confirm(new Autocomplete.LoginSaveOption(GeckoAutocompleteDelegateWrapper.toLoginEntry(login))));
                     }
                 });
                 mSaveLoginPrompt.setDelegate(() -> result.complete(autocompleteRequest.dismiss()));

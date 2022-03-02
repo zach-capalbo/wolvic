@@ -18,6 +18,7 @@ import androidx.annotation.Nullable;
 import androidx.annotation.StringDef;
 import androidx.annotation.UiThread;
 
+import com.igalia.wolvic.browser.api.impl.PromptDelegateImpl;
 import com.igalia.wolvic.browser.api.impl.SessionImpl;
 
 import org.json.JSONObject;
@@ -1007,6 +1008,14 @@ public interface ISession {
                 /** A string containing the initial password. */
                 public @Nullable final String password;
 
+                public AuthOptions(int flags, @Nullable String uri, int level, @Nullable String username, @Nullable String password) {
+                    this.flags = flags;
+                    this.uri = uri;
+                    this.level = level;
+                    this.username = username;
+                    this.password = password;
+                }
+
                 /** Empty constructor for tests */
                 protected AuthOptions() {
                     flags = 0;
@@ -1053,43 +1062,32 @@ public interface ISession {
          * content.
          */
         interface ChoicePrompt extends ISession.PromptDelegate.BasePrompt {
-            class Choice {
+            interface Choice {
                 /**
                  * A boolean indicating if the item is disabled. Item should not be selectable if this is
                  * true.
                  */
-                public final boolean disabled;
+                boolean disabled();
 
                 /**
                  * A String giving the URI of the item icon, or null if none exists (only valid for menus)
                  */
-                public final @Nullable String icon;
+                @Nullable String icon();
 
                 /** A String giving the ID of the item or group */
-                public final @NonNull String id;
+                @NonNull String id();
 
                 /** A Choice array of sub-items in a group, or null if not a group */
-                public final @Nullable ISession.PromptDelegate.ChoicePrompt.Choice[] items;
+                @Nullable ISession.PromptDelegate.ChoicePrompt.Choice[] items();
 
                 /** A string giving the label for displaying the item or group */
-                public final @NonNull String label;
+                @NonNull String label();
 
                 /** A boolean indicating if the item should be pre-selected (pre-checked for menu items) */
-                public final boolean selected;
+                boolean selected();
 
                 /** A boolean indicating if the item should be a menu separator (only valid for menus) */
-                public final boolean separator;
-
-                /** Empty constructor for tests. */
-                protected Choice() {
-                    disabled = false;
-                    icon = "";
-                    id = "";
-                    label = "";
-                    selected = false;
-                    separator = false;
-                    items = null;
-                }
+                boolean separator();
             }
 
             @Retention(RetentionPolicy.SOURCE)

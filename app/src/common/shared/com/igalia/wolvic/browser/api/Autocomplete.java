@@ -47,7 +47,7 @@ import java.lang.annotation.RetentionPolicy;
  * fields, if there is only one suitable login entry option.
  *
  * <p>In the case of multiple valid login entry options, GeckoView dispatches a <code>
- * GeckoSession.PromptDelegate.onLoginSelect</code> request, which allows for user-choice
+ * ISession.PromptDelegate.onLoginSelect</code> request, which allows for user-choice
  * delegation.
  *
  * <p>Based on the returned login entries, GeckoView will attempt to autofill/autocomplete the login
@@ -70,7 +70,7 @@ import java.lang.annotation.RetentionPolicy;
  *
  * <p>The user enters new or updated (password) login credentials in some login input fields and
  * submits explicitely (submit action) or by navigation. GeckoView identifies the entered
- * credentials and dispatches a <code>GeckoSession.PromptDelegate.onLoginSave(session, request)
+ * credentials and dispatches a <code>ISession.PromptDelegate.onLoginSave(session, request)
  * </code> with the provided credentials.
  *
  * <p>The app may dismiss the prompt request via <code>
@@ -84,15 +84,12 @@ import java.lang.annotation.RetentionPolicy;
  * stored the entry during the prompt request handling, it may ignore this storage saving request.
  * <br>
  *
- * @see GeckoRuntime#setAutocompleteStorageDelegate <br>
- * @see GeckoSession#setPromptDelegate <br>
- * @see GeckoSession.PromptDelegate#onLoginSave <br>
- * @see GeckoSession.PromptDelegate#onLoginSelect
+ * @see IRuntime#setAutocompleteStorageDelegate <br>
+ * @see ISession#setPromptDelegate <br>
+ * @see ISession.PromptDelegate#onLoginSave <br>
+ * @see ISession.PromptDelegate#onLoginSelect
  */
 public class Autocomplete {
-    private static final String LOGTAG = "Autocomplete";
-    private static final boolean DEBUG = false;
-
     protected Autocomplete() {}
 
     /** Holds credit card information for a specific entry. */
@@ -843,7 +840,7 @@ public class Autocomplete {
     /**
      * Implement this interface to handle runtime login storage requests. Login storage events include
      * login entry requests for autofill and autocompletion of login input fields. This delegate is
-     * attached to the runtime via {@link GeckoRuntime#setAutocompleteStorageDelegate}.
+     * attached to the runtime via {@link IRuntime#setAutocompleteStorageDelegate}.
      */
     public interface StorageDelegate {
         /**
@@ -899,7 +896,7 @@ public class Autocomplete {
 
         /**
          * Request saving or updating of the given login entry. This is triggered by confirming a {@link
-         * GeckoSession.PromptDelegate#onLoginSave onLoginSave} request.
+         * ISession.PromptDelegate#onLoginSave onLoginSave} request.
          *
          * @param login The {@link com.igalia.wolvic.browser.api.Autocomplete.LoginEntry} as confirmed by the prompt request.
          */
@@ -908,7 +905,7 @@ public class Autocomplete {
 
         /**
          * Request saving or updating of the given credit card entry. This is triggered by confirming a
-         * {@link GeckoSession.PromptDelegate#onCreditCardSave onCreditCardSave} request.
+         * {@link ISession.PromptDelegate#onCreditCardSave onCreditCardSave} request.
          *
          * @param creditCard The {@link com.igalia.wolvic.browser.api.Autocomplete.CreditCard} as confirmed by the prompt request.
          */
@@ -917,7 +914,7 @@ public class Autocomplete {
 
         /**
          * Request saving or updating of the given address entry. This is triggered by confirming a
-         * {@link GeckoSession.PromptDelegate#onAddressSave onAddressSave} request.
+         * {@link ISession.PromptDelegate#onAddressSave onAddressSave} request.
          *
          * @param address The {@link com.igalia.wolvic.browser.api.Autocomplete.Address} as confirmed by the prompt request.
          */

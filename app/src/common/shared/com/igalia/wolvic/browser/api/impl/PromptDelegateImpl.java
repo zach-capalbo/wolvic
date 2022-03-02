@@ -1,0 +1,693 @@
+package com.igalia.wolvic.browser.api.impl;
+
+import android.content.Context;
+import android.net.Uri;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
+import com.igalia.wolvic.browser.api.AllowOrDeny;
+import com.igalia.wolvic.browser.api.IResult;
+import com.igalia.wolvic.browser.api.ISession;
+
+import org.mozilla.geckoview.Autocomplete;
+import org.mozilla.geckoview.GeckoResult;
+import org.mozilla.geckoview.GeckoSession;
+
+import java.util.Arrays;
+
+class PromptDelegateImpl implements GeckoSession.PromptDelegate {
+    ISession.PromptDelegate mDelegate;
+    SessionImpl mSession;
+
+    public PromptDelegateImpl(ISession.PromptDelegate mDelegate, SessionImpl mSession) {
+        this.mDelegate = mDelegate;
+        this.mSession = mSession;
+    }
+
+    private static class PromptResponseImpl implements ISession.PromptDelegate.PromptResponse {
+        public PromptResponseImpl(PromptResponse mGeckoResponse) {
+            this.mGeckoResponse = mGeckoResponse;
+        }
+
+        GeckoSession.PromptDelegate.PromptResponse mGeckoResponse;
+    }
+
+    private static abstract class BasePromptImpl<T extends GeckoSession.PromptDelegate.BasePrompt> implements ISession.PromptDelegate.BasePrompt {
+        public BasePromptImpl(T geckoPrompt) {
+            this.mGeckoPrompt = geckoPrompt;
+        }
+
+        protected T mGeckoPrompt;
+        private ISession.PromptDelegate.PromptInstanceDelegate mDelegate;
+
+        @Nullable
+        @Override
+        public String title() {
+            return mGeckoPrompt.title;
+        }
+
+        @NonNull
+        @Override
+        public ISession.PromptDelegate.PromptResponse dismiss() {
+            return new PromptResponseImpl(mGeckoPrompt.dismiss());
+        }
+
+        @Override
+        public void setDelegate(@Nullable ISession.PromptDelegate.PromptInstanceDelegate delegate) {
+            if (mDelegate == delegate) {
+                return;
+            }
+            mDelegate = delegate;
+            if (mDelegate == null) {
+                mGeckoPrompt.setDelegate(null);
+            } else {
+                mGeckoPrompt.setDelegate(new PromptInstanceDelegate() {
+                    @Override
+                    public void onPromptDismiss(@NonNull BasePrompt prompt) {
+                        mDelegate.onPromptDismiss(BasePromptImpl.this);
+                    }
+                });
+            }
+        }
+
+        @Nullable
+        @Override
+        public ISession.PromptDelegate.PromptInstanceDelegate getDelegate() {
+            return null;
+        }
+
+        @Override
+        public boolean isComplete() {
+            return mGeckoPrompt.isComplete();
+        }
+    }
+
+    private static abstract class AlertPromptImpl extends BasePromptImpl<AlertPrompt> implements ISession.PromptDelegate.AlertPrompt {
+        public AlertPromptImpl(AlertPrompt geckoPrompt) {
+            super(geckoPrompt);
+        }
+    }
+
+    private static abstract class BeforeUnloadPromptImpl extends BasePromptImpl<BeforeUnloadPrompt> implements ISession.PromptDelegate.BeforeUnloadPrompt {
+        public BeforeUnloadPromptImpl(BeforeUnloadPrompt geckoPrompt) {
+            super(geckoPrompt);
+        }
+    }
+
+    private static abstract class RepostConfirmPromptImpl extends BasePromptImpl<RepostConfirmPrompt> implements ISession.PromptDelegate.RepostConfirmPrompt {
+        public RepostConfirmPromptImpl(RepostConfirmPrompt geckoPrompt) {
+            super(geckoPrompt);
+        }
+    }
+
+    private static abstract class ButtonPromptImpl extends BasePromptImpl<ButtonPrompt> implements ISession.PromptDelegate.ButtonPrompt {
+        public ButtonPromptImpl(ButtonPrompt geckoPrompt) {
+            super(geckoPrompt);
+        }
+    }
+
+    private static abstract class TextPromptImpl extends BasePromptImpl<TextPrompt> implements ISession.PromptDelegate.TextPrompt {
+        public TextPromptImpl(TextPrompt geckoPrompt) {
+            super(geckoPrompt);
+        }
+    }
+
+    private static abstract class AuthPromptImpl extends BasePromptImpl<AuthPrompt> implements ISession.PromptDelegate.AuthPrompt {
+        public AuthPromptImpl(AuthPrompt geckoPrompt) {
+            super(geckoPrompt);
+        }
+    }
+
+    private static abstract class ChoicePromptImpl extends BasePromptImpl<ChoicePrompt> implements ISession.PromptDelegate.ChoicePrompt {
+        public ChoicePromptImpl(ChoicePrompt geckoPrompt) {
+            super(geckoPrompt);
+        }
+    }
+
+    private static abstract class ColorPromptImpl extends BasePromptImpl<ColorPrompt> implements ISession.PromptDelegate.ColorPrompt {
+        public ColorPromptImpl(ColorPrompt geckoPrompt) {
+            super(geckoPrompt);
+        }
+    }
+
+    private static abstract class DateTimePromptImpl extends BasePromptImpl<DateTimePrompt> implements ISession.PromptDelegate.DateTimePrompt {
+        public DateTimePromptImpl(DateTimePrompt geckoPrompt) {
+            super(geckoPrompt);
+        }
+    }
+
+    private static abstract class FilePromptImpl extends BasePromptImpl<FilePrompt> implements ISession.PromptDelegate.FilePrompt {
+        public FilePromptImpl(FilePrompt geckoPrompt) {
+            super(geckoPrompt);
+        }
+    }
+
+    private static abstract class PopupPromptImpl extends BasePromptImpl<PopupPrompt> implements ISession.PromptDelegate.PopupPrompt {
+        public PopupPromptImpl(PopupPrompt geckoPrompt) {
+            super(geckoPrompt);
+        }
+    }
+
+    private static abstract class SharePromptImpl extends BasePromptImpl<SharePrompt> implements ISession.PromptDelegate.SharePrompt {
+        public SharePromptImpl(SharePrompt geckoPrompt) {
+            super(geckoPrompt);
+        }
+    }
+
+    private static abstract class LoginSaveImpl extends BasePromptImpl<AutocompleteRequest<Autocomplete.LoginSaveOption>>
+            implements ISession.PromptDelegate.AutocompleteRequest<com.igalia.wolvic.browser.api.Autocomplete.LoginSaveOption> {
+        public LoginSaveImpl(AutocompleteRequest<Autocomplete.LoginSaveOption> geckoPrompt) {
+            super(geckoPrompt);
+        }
+    }
+
+    private static abstract class LoginSelectImpl extends BasePromptImpl<AutocompleteRequest<Autocomplete.LoginSelectOption>>
+            implements ISession.PromptDelegate.AutocompleteRequest<com.igalia.wolvic.browser.api.Autocomplete.LoginSelectOption> {
+        public LoginSelectImpl(AutocompleteRequest<Autocomplete.LoginSelectOption> geckoPrompt) {
+            super(geckoPrompt);
+        }
+    }
+
+
+    @Nullable
+    @Override
+    public GeckoResult<PromptResponse> onAlertPrompt(@NonNull GeckoSession session, @NonNull AlertPrompt prompt) {
+        return map(mDelegate.onAlertPrompt(mSession, new AlertPromptImpl(prompt) {
+            @Nullable
+            @Override
+            public String message() {
+                return mGeckoPrompt.message;
+            }
+        }));
+    }
+
+    @Nullable
+    @Override
+    public GeckoResult<PromptResponse> onBeforeUnloadPrompt(@NonNull GeckoSession session, @NonNull BeforeUnloadPrompt prompt) {
+        return map(mDelegate.onBeforeUnloadPrompt(mSession, new BeforeUnloadPromptImpl(prompt) {
+            @NonNull
+            @Override
+            public ISession.PromptDelegate.PromptResponse confirm(@Nullable AllowOrDeny allowOrDeny) {
+                return new PromptResponseImpl(mGeckoPrompt.confirm(toGecko(allowOrDeny)));
+            }
+        }));
+    }
+
+    @Nullable
+    @Override
+    public GeckoResult<PromptResponse> onRepostConfirmPrompt(@NonNull GeckoSession session, @NonNull RepostConfirmPrompt prompt) {
+        return map(mDelegate.onRepostConfirmPrompt(mSession, new RepostConfirmPromptImpl(prompt) {
+            @NonNull
+            @Override
+            public ISession.PromptDelegate.PromptResponse confirm(@Nullable AllowOrDeny allowOrDeny) {
+                return new PromptResponseImpl(mGeckoPrompt.confirm(toGecko(allowOrDeny)));
+            }
+        }));
+    }
+
+    @Nullable
+    @Override
+    public GeckoResult<PromptResponse> onButtonPrompt(@NonNull GeckoSession session, @NonNull ButtonPrompt prompt) {
+        return map(mDelegate.onButtonPrompt(mSession, new ButtonPromptImpl(prompt) {
+            @Nullable
+            @Override
+            public String message() {
+                return mGeckoPrompt.message;
+            }
+
+            @NonNull
+            @Override
+            public ISession.PromptDelegate.PromptResponse confirm(int selection) {
+                return new PromptResponseImpl(mGeckoPrompt.confirm(selection));
+            }
+        }));
+    }
+
+    @Nullable
+    @Override
+    public GeckoResult<PromptResponse> onTextPrompt(@NonNull GeckoSession session, @NonNull TextPrompt prompt) {
+        return map(mDelegate.onTextPrompt(mSession, new TextPromptImpl(prompt) {
+            @Nullable
+            @Override
+            public String message() {
+                return mGeckoPrompt.message;
+            }
+
+            @Nullable
+            @Override
+            public String defaultValue() {
+                return mGeckoPrompt.defaultValue;
+            }
+
+            @NonNull
+            @Override
+            public ISession.PromptDelegate.PromptResponse confirm(@NonNull String text) {
+                return new PromptResponseImpl(mGeckoPrompt.confirm(text));
+            }
+        }));
+    }
+
+    @Nullable
+    @Override
+    public GeckoResult<PromptResponse> onAuthPrompt(@NonNull GeckoSession session, @NonNull AuthPrompt prompt) {
+        return map(mDelegate.onAuthPrompt(mSession, new AuthPromptImpl(prompt) {
+            @Nullable
+            @Override
+            public String message() {
+                return mGeckoPrompt.message;
+            }
+
+            @NonNull
+            @Override
+            public AuthOptions authOptions() {
+                int flags = 0;
+                if ((mGeckoPrompt.authOptions.flags & AuthPrompt.AuthOptions.Flags.CROSS_ORIGIN_SUB_RESOURCE) != 0) {
+                    flags |= AuthOptions.Flags.CROSS_ORIGIN_SUB_RESOURCE;
+                }
+                if ((mGeckoPrompt.authOptions.flags & AuthPrompt.AuthOptions.Flags.HOST) != 0) {
+                    flags |= AuthOptions.Flags.HOST;
+                }
+                if ((mGeckoPrompt.authOptions.flags & AuthPrompt.AuthOptions.Flags.ONLY_PASSWORD) != 0) {
+                    flags |= AuthOptions.Flags.ONLY_PASSWORD;
+                }
+                if ((mGeckoPrompt.authOptions.flags & AuthPrompt.AuthOptions.Flags.PREVIOUS_FAILED) != 0) {
+                    flags |= AuthOptions.Flags.PREVIOUS_FAILED;
+                }
+                if ((mGeckoPrompt.authOptions.flags & AuthPrompt.AuthOptions.Flags.PROXY) != 0) {
+                    flags |= AuthOptions.Flags.PROXY;
+                }
+
+                int level = 0;
+                switch (mGeckoPrompt.authOptions.level) {
+                    case AuthPrompt.AuthOptions.Level.NONE:
+                        level = AuthOptions.Level.NONE;
+                        break;
+                    case AuthPrompt.AuthOptions.Level.PW_ENCRYPTED:
+                        level = AuthOptions.Level.PW_ENCRYPTED;
+                        break;
+                    case AuthPrompt.AuthOptions.Level.SECURE:
+                        level = AuthOptions.Level.SECURE;
+                        break;
+                }
+
+                return new AuthOptions(flags, mGeckoPrompt.authOptions.uri, level, mGeckoPrompt.authOptions.username, mGeckoPrompt.authOptions.password);
+            }
+
+            @NonNull
+            @Override
+            public ISession.PromptDelegate.PromptResponse confirm(@NonNull String password) {
+                return new PromptResponseImpl(mGeckoPrompt.confirm(password));
+            }
+
+            @NonNull
+            @Override
+            public ISession.PromptDelegate.PromptResponse confirm(@NonNull String username, @NonNull String password) {
+                return new PromptResponseImpl(mGeckoPrompt.confirm(username, password));
+            }
+        }));
+    }
+
+    private static class ChoiceImpl implements ISession.PromptDelegate.ChoicePrompt.Choice {
+        public ChoiceImpl(ChoicePrompt.Choice mGeckoChoice) {
+            this.mGeckoChoice = mGeckoChoice;
+        }
+
+        ChoicePrompt.Choice mGeckoChoice;
+
+        @Override
+        public boolean disabled() {
+            return mGeckoChoice.disabled;
+        }
+
+        @Nullable
+        @Override
+        public String icon() {
+            return mGeckoChoice.icon;
+        }
+
+        @NonNull
+        @Override
+        public String id() {
+            return mGeckoChoice.id;
+        }
+
+        @Nullable
+        @Override
+        public ISession.PromptDelegate.ChoicePrompt.Choice[] items() {
+            if (mGeckoChoice.items == null) {
+                return null;
+            }
+            return Arrays.stream(mGeckoChoice.items).map(ChoiceImpl::new).toArray(ISession.PromptDelegate.ChoicePrompt.Choice[]::new);
+        }
+
+        @NonNull
+        @Override
+        public String label() {
+            return mGeckoChoice.label;
+        }
+
+        @Override
+        public boolean selected() {
+            return mGeckoChoice.selected;
+        }
+
+        @Override
+        public boolean separator() {
+            return mGeckoChoice.separator;
+        }
+
+        static ChoicePrompt.Choice toGecko(ISession.PromptDelegate.ChoicePrompt.Choice choice) {
+            return ((ChoiceImpl)choice).mGeckoChoice;
+        }
+    }
+
+    @Nullable
+    @Override
+    public GeckoResult<PromptResponse> onChoicePrompt(@NonNull GeckoSession session, @NonNull ChoicePrompt prompt) {
+        return map(mDelegate.onChoicePrompt(mSession, new ChoicePromptImpl(prompt) {
+            @Nullable
+            @Override
+            public String message() {
+                return mGeckoPrompt.message;
+            }
+
+            @Override
+            public int type() {
+                switch (mGeckoPrompt.type) {
+                    case ChoicePrompt.Type.MENU:
+                        return Type.MENU;
+                    case ChoicePrompt.Type.MULTIPLE:
+                        return Type.MULTIPLE;
+                    case ChoicePrompt.Type.SINGLE:
+                    default:
+                        return Type.SINGLE;
+                }
+            }
+
+            @NonNull
+            @Override
+            public Choice[] choices() {
+                return Arrays.stream(mGeckoPrompt.choices).map(ChoiceImpl::new).toArray(Choice[]::new);
+            }
+
+            @NonNull
+            @Override
+            public ISession.PromptDelegate.PromptResponse confirm(@NonNull String selectedId) {
+                return new PromptResponseImpl(mGeckoPrompt.confirm(selectedId));
+            }
+
+            @NonNull
+            @Override
+            public ISession.PromptDelegate.PromptResponse confirm(@NonNull String[] selectedIds) {
+                return new PromptResponseImpl(mGeckoPrompt.confirm(selectedIds));
+            }
+
+            @NonNull
+            @Override
+            public ISession.PromptDelegate.PromptResponse confirm(@NonNull Choice selectedChoice) {
+                return new PromptResponseImpl(mGeckoPrompt.confirm(ChoiceImpl.toGecko(selectedChoice)));
+            }
+
+            @NonNull
+            @Override
+            public ISession.PromptDelegate.PromptResponse confirm(@NonNull Choice[] selectedChoices) {
+                return new PromptResponseImpl(mGeckoPrompt.confirm(Arrays.
+                        stream(selectedChoices).
+                        map(ChoiceImpl::toGecko).
+                        toArray(ChoicePrompt.Choice[]::new)));
+            }
+        }));
+    }
+
+    @Nullable
+    @Override
+    public GeckoResult<PromptResponse> onColorPrompt(@NonNull GeckoSession session, @NonNull ColorPrompt prompt) {
+        return map(mDelegate.onColorPrompt(mSession, new ColorPromptImpl(prompt) {
+            @Nullable
+            @Override
+            public String defaultValue() {
+                return mGeckoPrompt.defaultValue;
+            }
+
+            @NonNull
+            @Override
+            public ISession.PromptDelegate.PromptResponse confirm(@NonNull String color) {
+                return new PromptResponseImpl(mGeckoPrompt.confirm(color));
+            }
+        }));
+    }
+
+    @Nullable
+    @Override
+    public GeckoResult<PromptResponse> onDateTimePrompt(@NonNull GeckoSession session, @NonNull DateTimePrompt prompt) {
+        return map(mDelegate.onDateTimePrompt(mSession, new DateTimePromptImpl(prompt) {
+            @Override
+            public int type() {
+                switch (mGeckoPrompt.type) {
+                    case DateTimePrompt.Type.DATE:
+                        return Type.DATE;
+                    case DateTimePrompt.Type.DATETIME_LOCAL:
+                        return Type.DATETIME_LOCAL;
+                    case DateTimePrompt.Type.MONTH:
+                        return Type.MONTH;
+                    case DateTimePrompt.Type.TIME:
+                        return Type.TIME;
+                    case DateTimePrompt.Type.WEEK:
+                        return Type.WEEK;
+                }
+
+                throw new RuntimeException("Unhandled DateTimePrompt.Type value");
+            }
+
+            @Nullable
+            @Override
+            public String defaultValue() {
+                return mGeckoPrompt.defaultValue;
+            }
+
+            @Nullable
+            @Override
+            public String minValue() {
+                return mGeckoPrompt.minValue;
+            }
+
+            @Nullable
+            @Override
+            public String maxValue() {
+                return mGeckoPrompt.maxValue;
+            }
+
+            @NonNull
+            @Override
+            public ISession.PromptDelegate.PromptResponse confirm(@NonNull String datetime) {
+                return new PromptResponseImpl(mGeckoPrompt.confirm(datetime));
+            }
+        }));
+    }
+
+    @Nullable
+    @Override
+    public GeckoResult<PromptResponse> onFilePrompt(@NonNull GeckoSession session, @NonNull FilePrompt prompt) {
+        return map(mDelegate.onFilePrompt(mSession, new FilePromptImpl(prompt) {
+            @Override
+            public int type() {
+                switch (mGeckoPrompt.type) {
+                    case FilePrompt.Type.MULTIPLE:
+                        return Type.MULTIPLE;
+                    case FilePrompt.Type.SINGLE:
+                        return Type.SINGLE;
+                }
+                throw new RuntimeException("Unhandled FilePrompt.Type value");
+            }
+
+            @Nullable
+            @Override
+            public String[] mimeTypes() {
+                return mGeckoPrompt.mimeTypes;
+            }
+
+            @Override
+            public int captureType() {
+                switch (mGeckoPrompt.capture) {
+                    case FilePrompt.Capture.ANY:
+                        return Capture.ANY;
+                    case FilePrompt.Capture.ENVIRONMENT:
+                        return Capture.ENVIRONMENT;
+                    case FilePrompt.Capture.NONE:
+                        return Capture.NONE;
+                    case FilePrompt.Capture.USER:
+                        return Capture.USER;
+                }
+                throw new RuntimeException("Unhandled FilePrompt.Capture value");
+            }
+
+            @NonNull
+            @Override
+            public ISession.PromptDelegate.PromptResponse confirm(@NonNull Context context, @NonNull Uri uri) {
+                return new PromptResponseImpl(mGeckoPrompt.confirm(context, uri));
+            }
+
+            @NonNull
+            @Override
+            public ISession.PromptDelegate.PromptResponse confirm(@NonNull Context context, @NonNull Uri[] uris) {
+                return new PromptResponseImpl(mGeckoPrompt.confirm(context, uris));
+            }
+        }));
+    }
+
+    @Nullable
+    @Override
+    public GeckoResult<PromptResponse> onPopupPrompt(@NonNull GeckoSession session, @NonNull PopupPrompt prompt) {
+        return map(mDelegate.onPopupPrompt(mSession, new PopupPromptImpl(prompt) {
+
+            @Nullable
+            @Override
+            public String targetUri() {
+                return mGeckoPrompt.targetUri;
+            }
+
+            @NonNull
+            @Override
+            public ISession.PromptDelegate.PromptResponse confirm(@NonNull AllowOrDeny response) {
+                return new PromptResponseImpl(mGeckoPrompt.confirm(toGecko(response)));
+            }
+        }));
+    }
+
+    @Nullable
+    @Override
+    public GeckoResult<PromptResponse> onSharePrompt(@NonNull GeckoSession session, @NonNull SharePrompt prompt) {
+        return map(mDelegate.onSharePrompt(mSession, new SharePromptImpl(prompt) {
+
+            @Nullable
+            @Override
+            public String text() {
+                return mGeckoPrompt.text;
+            }
+
+            @Nullable
+            @Override
+            public String uri() {
+                return mGeckoPrompt.uri;
+            }
+
+            @NonNull
+            @Override
+            public ISession.PromptDelegate.PromptResponse confirm(int response) {
+                return new PromptResponseImpl(mGeckoPrompt.confirm(response));
+            }
+        }));
+    }
+
+    @Nullable
+    @Override
+    public GeckoResult<PromptResponse> onLoginSave(@NonNull GeckoSession session, @NonNull AutocompleteRequest<Autocomplete.LoginSaveOption> request) {
+        return map(mDelegate.onLoginSave(mSession, new LoginSaveImpl(request) {
+            @NonNull
+            @Override
+            public com.igalia.wolvic.browser.api.Autocomplete.LoginSaveOption[] options() {
+                return Arrays.stream(request.options)
+                        .map(opt -> new com.igalia.wolvic.browser.api.Autocomplete.LoginSaveOption(fromGecko(opt.value)))
+                        .toArray(com.igalia.wolvic.browser.api.Autocomplete.LoginSaveOption[]::new);
+            }
+
+            @NonNull
+            @Override
+            public ISession.PromptDelegate.PromptResponse confirm(@NonNull com.igalia.wolvic.browser.api.Autocomplete.Option<?> selection) {
+                return new PromptResponseImpl(mGeckoPrompt.confirm(
+                        new Autocomplete.LoginSaveOption(toGecko((com.igalia.wolvic.browser.api.Autocomplete.LoginEntry) selection.value)))
+                );
+            }
+        }));
+    }
+
+    @Nullable
+    @Override
+    public GeckoResult<PromptResponse> onAddressSave(@NonNull GeckoSession session, @NonNull AutocompleteRequest<Autocomplete.AddressSaveOption> request) {
+        return GeckoSession.PromptDelegate.super.onAddressSave(session, request);
+    }
+
+    @Nullable
+    @Override
+    public GeckoResult<PromptResponse> onCreditCardSave(@NonNull GeckoSession session, @NonNull AutocompleteRequest<Autocomplete.CreditCardSaveOption> request) {
+        return GeckoSession.PromptDelegate.super.onCreditCardSave(session, request);
+    }
+
+    @Nullable
+    @Override
+    public GeckoResult<PromptResponse> onLoginSelect(@NonNull GeckoSession session, @NonNull AutocompleteRequest<Autocomplete.LoginSelectOption> request) {
+        return map(mDelegate.onLoginSelect(mSession, new LoginSelectImpl(request) {
+            @NonNull
+            @Override
+            public com.igalia.wolvic.browser.api.Autocomplete.LoginSelectOption[] options() {
+                return Arrays.stream(request.options)
+                        .map(opt -> new com.igalia.wolvic.browser.api.Autocomplete.LoginSelectOption(fromGecko(opt.value)))
+                        .toArray(com.igalia.wolvic.browser.api.Autocomplete.LoginSelectOption[]::new);
+            }
+
+            @NonNull
+            @Override
+            public ISession.PromptDelegate.PromptResponse confirm(@NonNull com.igalia.wolvic.browser.api.Autocomplete.Option<?> selection) {
+                return new PromptResponseImpl(mGeckoPrompt.confirm(
+                        new Autocomplete.LoginSelectOption(toGecko((com.igalia.wolvic.browser.api.Autocomplete.LoginEntry) selection.value)))
+                );
+            }
+        }));
+    }
+
+    @Nullable
+    @Override
+    public GeckoResult<PromptResponse> onCreditCardSelect(@NonNull GeckoSession session, @NonNull AutocompleteRequest<Autocomplete.CreditCardSelectOption> request) {
+        return GeckoSession.PromptDelegate.super.onCreditCardSelect(session, request);
+    }
+
+    @Nullable
+    @Override
+    public GeckoResult<PromptResponse> onAddressSelect(@NonNull GeckoSession session, @NonNull AutocompleteRequest<Autocomplete.AddressSelectOption> request) {
+        return GeckoSession.PromptDelegate.super.onAddressSelect(session, request);
+    }
+
+    private GeckoResult<PromptResponse> map(IResult<ISession.PromptDelegate.PromptResponse> result) {
+        return ResultImpl.from(result).map(value -> {
+            if (value == null) {
+                return null;
+            }
+            return ((PromptResponseImpl)value).mGeckoResponse;
+        });
+    }
+
+    private @Nullable org.mozilla.geckoview.AllowOrDeny toGecko(@Nullable AllowOrDeny value) {
+        if (value == null) {
+            return null;
+        }
+        switch (value) {
+            case ALLOW: return org.mozilla.geckoview.AllowOrDeny.ALLOW;
+            case DENY: return org.mozilla.geckoview.AllowOrDeny.DENY;
+        }
+
+        return null;
+    }
+
+    private @NonNull Autocomplete.LoginEntry toGecko(@NonNull com.igalia.wolvic.browser.api.Autocomplete.LoginEntry entry) {
+        return new Autocomplete.LoginEntry.Builder()
+                .formActionOrigin(entry.formActionOrigin)
+                .guid(entry.guid)
+                .httpRealm(entry.httpRealm)
+                .origin(entry.origin)
+                .password(entry.password)
+                .username(entry.username)
+                .build();
+    }
+
+    private @NonNull com.igalia.wolvic.browser.api.Autocomplete.LoginEntry fromGecko(@NonNull Autocomplete.LoginEntry entry) {
+        return new com.igalia.wolvic.browser.api.Autocomplete.LoginEntry.Builder()
+                .formActionOrigin(entry.formActionOrigin)
+                .guid(entry.guid)
+                .httpRealm(entry.httpRealm)
+                .origin(entry.origin)
+                .password(entry.password)
+                .username(entry.username)
+                .build();
+    }
+}

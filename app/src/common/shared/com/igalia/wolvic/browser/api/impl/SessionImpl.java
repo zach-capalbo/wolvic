@@ -91,12 +91,12 @@ public class SessionImpl implements ISession {
 
     @Override
     public void goBack(boolean userInteraction) {
-        mSession.goBack(userInteraction);
+        mSession.goBack();
     }
 
     @Override
     public void goForward(boolean userInteraction) {
-        mSession.goBack(userInteraction);
+        mSession.goBack();
     }
 
     @Override
@@ -265,7 +265,7 @@ public class SessionImpl implements ISession {
         if (mContentBlockingDelegate == null) {
             mSession.setContentBlockingDelegate(null);
         } else {
-            mSession.setContentBlockingDelegate(new ContentBlockingDelegateImpl(mHistoryDelegate, this));
+            mSession.setContentBlockingDelegate(new ContentBlockingDelegateImpl(mContentBlockingDelegate, this));
         }
     }
 
