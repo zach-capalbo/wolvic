@@ -709,11 +709,11 @@ DeviceDelegateWaveVR::ProcessEvents() {
         m.isRunning = false;
         return;
       }
-      case WVR_EventType_SystemInteractionModeChanged: {
+      case WVR_EventType_InteractionModeChanged: {
         VRB_WAVE_EVENT_LOG("WVR_EventType_SystemInteractionModeChanged");
       }
         break;
-      case WVR_EventType_SystemGazeTriggerTypeChanged: {
+      case WVR_EventType_GazeTriggerTypeChanged: {
         VRB_WAVE_EVENT_LOG("WVR_EventType_SystemGazeTriggerTypeChanged");
       }
         break;
